@@ -4,8 +4,8 @@ import logging as log
 import datetime as dt
 from time import sleep
 
-cascPath = "haarcascade_eye.xml"
-eyeCascade = cv2.CascadeClassifier(cascPath)
+cascadeFile = "haarcascade_eye.xml"
+eyeCascade = cv2.CascadeClassifier(cv2.data.haarcascades + cascadeFile)
 log.basicConfig(filename='webcam.log',level=log.INFO)
 
 video_capture = cv2.VideoCapture(2)
