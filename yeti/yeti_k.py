@@ -42,7 +42,7 @@ while True:
         frame = cv2.drawContours(frame, contours, -1, (255,255,0))
 
         frame = cv2.putText(frame, f"contours: {len(contours)}", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, .8, (255,255,0) )
-        frame = cv2.putText(frame, f"threshold: {threshold}", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, .8, (255,255,0) )
+        frame = cv2.putText(frame, f"threshold: {threshold}", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, .8, (255,255,0) )
 
         cv2.imshow('YETI', frame)
         cv2.imshow("grey", gray)
