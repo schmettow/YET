@@ -40,8 +40,18 @@ while True:
     if detected:
         (x, y, w, h) = eye
         ret, binary = cv2.threshold(gray,127,255,cv2.THRESH_BINARY)
-        eye_frame = binary[y:y+h,x:x+w]
-        cv2.imshow('YETI', eye_frame)
+        eye_frame = gray[y:y+h,x:x+w]
+        half_w = int(w/2)
+        left_frame = eye_frame[y:y+h, x:x+half_w]
+        cv2.putText(left_frame, #numpy array on which text is written
+            "left", #text
+            (50, 50), #position at which writing has to start
+            cv2.FONT_HERSHEY_SIMPLEX, #font family
+            50, #font size
+            (209, 80, 0, 255), #font color
+            3) #font stroke
+        right_frame = eye_frame[y:y+h, half_w:x]
+        cv2.imshow('YETI', left_frame)
     else: 
         cv2.imshow('YETI', frame)
     
