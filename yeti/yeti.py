@@ -8,7 +8,7 @@ cascPath = "haarcascade_eye.xml"
 eyeCascade = cv2.CascadeClassifier(cascPath)
 log.basicConfig(filename='webcam.log',level=log.INFO)
 
-video_capture = cv2.VideoCapture(1)
+video_capture = cv2.VideoCapture(2)
 detected = False
 
 if not video_capture.isOpened():
