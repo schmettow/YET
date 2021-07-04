@@ -38,6 +38,12 @@ while True:
         cv2.rectangle(frame, (x,y), (x+w, y+h), (255,0,0))
 
         ret, thresh_gray = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+        thresh_adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 51, 2 )
+        contours, hierarchy = cv2.findContours(thresh_adaptive, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        frame_contours_adaptive = cv2.drawContours(frame, contours, -1, (255,255,0))
+        cv2.imshow("adaptive", thresh_adaptive)
+        cv2.imshow("adaptive/contours", frame_contours_adaptive)
+
         contours, hierarchy = cv2.findContours(thresh_gray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         frame = cv2.drawContours(frame, contours, -1, (255,255,0))
 
