@@ -1,9 +1,13 @@
+# LIBRARIES
+
 import cv2
 import numpy as np
 import sys
 import logging as log
 import datetime as dt
 from time import sleep
+
+# PREPARATIONS
 
 #cascPath = cv2.data.haarcascades + "haarcascade_eye.xml"
 #cascPath = "/Users/martin/Google Drive/Aktenkoffer/Packages/YET/yeti/haarcascade_eye.xml"
@@ -13,25 +17,30 @@ log.basicConfig(filename='webcam.log',level=log.INFO)
 video_capture = cv2.VideoCapture(1)
 detected = False
 
-white_lower = np.array([200, 200, 200], dtype = "uint8")
-white_upper = np.array([255, 255, 255], dtype = "uint8")
+if video_capture.isOpened():
+    width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH ))
+    height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT ))
+    fps =  video_capture.get(cv2.CAP_PROP_FPS)
+    dim = (width, height)
+else:
+    print('Unable to load camera.')
+    exit()
 
-if not video_capture.isOpened():
-        print('Unable to load camera.')
-        exit()
 
+# FAST LOOP
 while True:
 
     # Capture frame-by-frame
+    # Assumingly, read() waits for the next frame. 
+    # A side effect is that the key events are also only sampled at that rate.
+    # Which can feel sluggish with low frame rates.
     ret, frame = video_capture.read()
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
         break
     
+    # FRAME PROCESSING
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-    
-    cv2.imshow('YETI', frame)
     eyes = eyeCascade.detectMultiScale(
         gray,
         scaleFactor=1.1,
@@ -39,27 +48,31 @@ while True:
         minSize=(200, 200)
     )
 
+
+    # AUTOMATIC TRANSITIONALS
     if len(eyes) > 0:
         eye = eyes[0]
         print("Eye detected")
-        detected = True
+        Detected = True ## write status variable in capital
     else:
-        detected = False
+        Detected = False
 
-    if detected:
+    # CONDITIONAL PROCESSING
+    if Detected:
         (x, y, w, h) = eye
-        #ret, binary = cv2.threshold(gray,127,255,cv2.THRESH_BINARY)
-        eye_frame = gray[y:y+h,x:x+w]
-        half_w = int(w/2)
-        left_frame = eye_frame[y:y+h, x:x+half_w]
-        right_frame = eye_frame[y:y+h, half_w:x]
-        cv2.imshow('YETI-eye', eye_frame)
-        #cv2.imshow('YETI-right', right_frame)
-
-    cv2.imshow('YETI', gray)
+        eye_frame = cv2.resize(gray[y:y+h,x:x+w], dim, interpolation = cv2.INTER_AREA)
         
+        
+    # PRESENTITIONALS
+    if Detected:
+        out_frame = cv2.putText(eye_frame, f"Hello Eye!", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,0,0))
+    else:
+        out_frame = frame
     
+    cv2.imshow('YETI_1', out_frame)
     
+    # This is almost cryptic
+    # Can we use the PyGame event handler, instead?
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
@@ -69,11 +82,3 @@ video_capture.release()
 cv2.destroyAllWindows()
 
 
-def augment_frame(left_frame):
-    cv2.putText(left_frame, #numpy array on which text is written
-    "left", #text
-    (50, 50), #position at which writing has to start
-    cv2.FONT_HERSHEY_SIMPLEX, #font family
-    50, #font size
-    (209, 80, 0, 255), #font color
-    3) #font stroke
