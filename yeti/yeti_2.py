@@ -26,6 +26,7 @@ else:
     print('Unable to load camera.')
     exit()
 
+Detected = False
 
 # FAST LOOP
 while True:
