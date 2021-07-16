@@ -45,7 +45,7 @@ while True:
         gray,
         scaleFactor=1.1,
         minNeighbors=5,
-        minSize=(200, 200)
+        minSize=(250, 250)
     )
 
 
@@ -56,23 +56,24 @@ while True:
         Detected = True ## write status variable in capital
     else:
         Detected = False
-
+    
     # CONDITIONAL PROCESSING
     if Detected:
         (x, y, w, h) = eye
-        eye_frame = cv2.resize(gray[y:y+h,x:x+w], dim, interpolation = cv2.INTER_AREA)
+        eye_frame = cv2.resize(frame[y:y+h,x:x+w], dim, interpolation = cv2.INTER_AREA)
         
         
     # PRESENTITIONALS
     if Detected:
-        out_frame = cv2.putText(eye_frame, f"Hello Eye!", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255,0,0))
+        out_frame = cv2.putText(eye_frame, f"Hello Eye!", (100, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0,0,255), thickness = 8)
     else:
         out_frame = frame
     
     cv2.imshow('YETI_1', out_frame)
     
-    # This is almost cryptic
-    # Can we use the PyGame event handler, instead?
+    
+    # INTERACTIVE TRANSITIONALS
+    
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
