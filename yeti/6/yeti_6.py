@@ -1,4 +1,4 @@
-## Blink detection
+## YETI_6: Simple blink detection and duration measures
 
 import sys
 import logging as log
@@ -18,9 +18,9 @@ from pygame.compat import unichr_, unicode_
 
 # CV
 
-log.basicConfig(filename='webcam.log',level=log.INFO)
-video_capture = cv2.VideoCapture(1)
-if not video_capture.isOpened():
+log.basicConfig(filename='YET.log',level=log.INFO)
+YET = cv2.VideoCapture(1)
+if not YET.isOpened():
         print('Unable to load camera.')
         exit()
 eyeCascade = cv2.CascadeClassifier("./models/haarcascade_eye.xml")
@@ -38,6 +38,7 @@ col_red_dim = (120, 0, 0)
 col_green_dim = (0, 60, 0)
 col_yellow_dim = (120,120,0)
 
+## width and height in pixel
 SCREEN_SIZE = (1000, 800)
 
 pg.init()
@@ -52,10 +53,12 @@ font = pg.font.Font(None, 60)
 
 
 def main():
+    
     ## Initial State
-    STATE = "Stream"
+    STATE = "Stream" # Detected, Closed
     BACKGR_COL = col_black
     T_Blink = 999.99
+    
     ## FAST LOOP
     while True:
         pg.display.get_surface().fill(BACKGR_COL) 
@@ -67,12 +70,12 @@ def main():
             elif STATE == "Detected":
                 pass
             if event.type == QUIT:
-                video_capture.release()
+                YET.release()
                 pg.quit()
                 sys.exit()
             
         # Frame capturing and unconditional processing
-        ret, Frame = video_capture.read(1)
+        ret, Frame = YET.read(1)
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
             break

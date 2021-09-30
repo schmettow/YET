@@ -20,9 +20,9 @@ from pygame.compat import unichr_, unicode_
 
 log.basicConfig(filename='webcam.log',level=log.INFO)
 
-video_capture = cv2.VideoCapture(1)
+YET = cv2.VideoCapture(1)
 
-if not video_capture.isOpened():
+if not YET.isOpened():
         print('Unable to load camera.')
         exit()
 
@@ -74,13 +74,13 @@ def main():
                     STATE = "Stream"
                     print("Stream")
             if event.type == QUIT:
-                video_capture.release()
+                YET.release()
                 pg.quit()
                 sys.exit()
             
         # Conditional Processing
         if STATE == "Stream":
-            ret, Frame = video_capture.read(1)
+            ret, Frame = YET.read(1)
             if not ret:
                 print("Can't receive frame (stream end?). Exiting ...")
                 break

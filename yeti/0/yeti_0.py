@@ -6,16 +6,16 @@ from time import sleep
 
 log.basicConfig(filename='webcam.log',level=log.INFO)
 
-video_capture = cv2.VideoCapture(1)
+YET = cv2.VideoCapture(1)
 
-if not video_capture.isOpened():
+if not YET.isOpened():
         print('Unable to load camera.')
         exit()
 
 while True:
 
     # Capture frame-by-frame
-    ret, frame = video_capture.read()
+    ret, frame = YET.read()
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
         break
@@ -28,5 +28,5 @@ while True:
 
     
 # When everything is done, release the capture
-video_capture.release()
+YET.release()
 cv2.destroyAllWindows()

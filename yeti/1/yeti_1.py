@@ -14,13 +14,13 @@ from time import sleep
 eyeCascade = cv2.CascadeClassifier("./models/haarcascade_eye.xml")
 log.basicConfig(filename='webcam.log',level=log.INFO)
 
-video_capture = cv2.VideoCapture(1)
+YET = cv2.VideoCapture(1)
 detected = False
 
-if video_capture.isOpened():
-    width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH ))
-    height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT ))
-    fps =  video_capture.get(cv2.CAP_PROP_FPS)
+if YET.isOpened():
+    width = int(YET.get(cv2.CAP_PROP_FRAME_WIDTH ))
+    height = int(YET.get(cv2.CAP_PROP_FRAME_HEIGHT ))
+    fps =  YET.get(cv2.CAP_PROP_FPS)
     dim = (width, height)
 else:
     print('Unable to load camera.')
@@ -34,7 +34,7 @@ while True:
     # Assumingly, read() waits for the next frame. 
     # A side effect is that the key events are also only sampled at that rate.
     # Which can feel sluggish with low frame rates.
-    ret, frame = video_capture.read()
+    ret, frame = YET.read()
     if not ret:
         print("Can't receive frame (stream end?). Exiting ...")
         break
@@ -79,7 +79,7 @@ while True:
 
     
 # When everything is done, release the capture
-video_capture.release()
+YET.release()
 cv2.destroyAllWindows()
 
 
