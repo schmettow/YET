@@ -68,7 +68,7 @@ Public Github project [schmettow/YET](https://github.com/schmettow/YET/)
 
 The strength of Yet0 are its very low price. Clip-Y is a very simple shape that
 
--   usesd minimal material (1- 2g)
+-   used minimal material (1- 2g)
 
 -   is almost indestructible by mechanical forces
 
@@ -76,7 +76,7 @@ The strength of Yet0 are its very low price. Clip-Y is a very simple shape that
 
 -   requires no post-processing
 
-# Yeti catalogues
+# Yeti catalogue
 
 ## Yeti2
 
@@ -87,4 +87,54 @@ The strength of Yet0 are its very low price. Clip-Y is a very simple shape that
 -   needs calibration by setting variables
 -   connects with Yeti3 for automated calibration
 
-# 
+
+## Yeti8
+
+[Yeti8](https://github.com/schmettow/YET/tree/main/yeti/8) performs a two-point calibration procedure.
+
+This Yeti demonstration of horizontal brightness gradient tracking. With [Yeti3](https://github.com/schmettow/YET/tree/main/yeti/3) it could be observed that eyeball position x and brightness y are linearly related. 
+
+    x = beta_0 * beta_1 * y
+
+In theory that means, you only have to measure brightness at two points (A,B) and estimate the linear coefficients using the following formula:
+
+    beta_0 = y_A
+    beta_1 = (y_B - y_A) / (x_B - x_A)
+
+Then, Yeti8 continues measuring brightness and shows a circle that follows horizontal eye movements.
+
+
+### Roadmaps
+
+
+#### Improve tracking
+
+1. The obvious improvement is to add *vertical tracking*.
+1. The current algorithm uses the difference between brightness, whereas the linear model in [Yeti3](https://github.com/schmettow/YET/tree/main/yeti/3) uses L and R as separate predictors, which is the most accurate. In Python, you can implement a linear model using, for example,  [Scikit.Learn](https://stackabuse.com/linear-regression-in-python-with-scikit-learn/).
+
+#### Validate
+
+1. Parts from Yeti3 can be used to measure accuracy.
+
+#### Experimentation
+
+Yeti8 is a good precursor for programming experiments, where a quick re-calibration is possible at any times.
+
+1. Implement data collection
+1. Present pictures (e.g. robot faces) and collect data
+1. Present a video clip and collect data
+1. Recombine Yeti8 with the Stroop experiment
+1. Recombine Yeti8 with the Corsi block tapping task
+1. Implement an approach-avoidance task
+
+#### Assistive technology
+
+
+
+#### Design
+
+1. An advantage of using linear regression is that the predicted x positions come with information on uncertainty (e.g. confidence limits). This can be used to adjust the circle size in Follow mode.
+
+    
+
+

@@ -185,7 +185,7 @@ def SBG_diff(frame):
     return bright_diff
 
 
-# Estimates linear coefficients from two points and screen margins
+# Estimates linear coefficients from two points and their brightness diff
 def SBG_fit(diff_L, diff_R, margin_L, margin_R):
     beta_0 = diff_L
     beta_1 = (margin_R - margin_L)/(diff_R - diff_L)
