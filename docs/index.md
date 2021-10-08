@@ -10,9 +10,7 @@ output: html_document
 YET is Your Eye Tracker. The goal of this project is to make eye trackers so cheap that everyone can own one. At the moment, the primary directive of YET is on developing skills in students of the Social Sciences. Skills such as:
 
 -   calibrating eye trackers
-
 -   evaluating eye trackers
-
 -   building eye trackers
 
     -   programming
@@ -35,7 +33,9 @@ YET is Your Eye Tracker. The goal of this project is to make eye trackers so che
 
 ## Yet
 
-Most (not all) eye trackers are devices that use a camera to record the eye ball. The first idea of YET is that *every camera can be an eye tracker.* The first designs in YET use a USB endoscope camera with 5.5mm or 7mm diameter, which you can buy for under 10 EUR "on the internet". A combination of a camera module and a head mount is called a *Yet*. The first Yets will be based on household materials and a few 3D printed parts, but more advanced head mounts are possible.
+The hardware of most (not all) eye trackers is essentially a a camera pointed towards the eyeball. The first idea of YET is that *every camera pointed to the eyeball can be an eye tracker.* Today, that creates a myriad of possibilities. 
+
+A device that points a camera to the eye, for example by means of a head mount, is called a *Yet*. The first Yets will be based on household materials and a few 3D printed parts, but more advanced head mounts are possible. The first designs in YET emphasize the values of simplicity and affordability. We use a USB endoscope camera with 5.5mm or 7mm diameter, which you can buy for under 10 EUR "on the internet". Connected to a computer (or smartphone), this camera can be accessed just like a regular webcam, which makes it easy to work with in a number of ways.
 
 Yets are numbered and the first is *Yet0*. For making Yet0, you need:
 
@@ -48,7 +48,7 @@ Yets are numbered and the first is *Yet0*. For making Yet0, you need:
 
 The second idea of YET is that *an eye tracking device consists of before-mentioned camera, plus a software mechanism that translates a Yet stream into eye ball coordinates.* Typically this mechanism is a software that uses Computer Vision procedures for the analysis of the Yet stream. A *Yet interface (Yeti)* is a software that processes the *Yet stream* of frames in a useful or interesting way. Usually, Yetis are self-written single-purpose programs in Python, using the libraries OpenCV for stream processing and Pygame for the user interface. But, more advanced or multi-purpose interfaces are possible.
 
-Yetis are numbered and distributed on Github ([schmettow/YET](https://github.com/schmettow/YET/tree/main/yeti)) The first is *Yeti0, which* does nothing more than capturing the Yet stream and displaying it. It is not interactive and therefore is build using OpenCV (w/o Pygame). The first interactive Yeti to use Pygame is Yeti2, which introduces a very simple algorithm (split-frame brightness gradient, SBG), as well as a common structure for Yetis.
+Yetis are numbered and distributed on Github ([schmettow/YET](https://github.com/schmettow/YET/tree/main/yeti)) The first is Yeti0, which does nothing more than capturing the Yet stream and displaying it. It is not interactive and therefore is build using OpenCV, only (w/o Pygame). The first interactive Yeti, using Pygame is Yeti2, which introduces a very simple, but effective, tracking algorithm (split-frame brightness gradient, SBG), as well as a common structure for Yetis.
 
 The programming techniques for development of Yetis will be introduced in the following online book: [Programming for Psychologists](https://schmettow.github.io/PfP_Book/).
 
@@ -56,9 +56,9 @@ The programming techniques for development of Yetis will be introduced in the fo
 
 The third idea of YET is that replacing a few expensive eye trackers with *an armada of cheap ones, can be transformative for research*. In the future, we expect to be able to build *Yet appliances (Yeta)*, such as mobile recording devices, novel user interfaces or assistive technologies.
 
-# Resources
+# Tools
 
-Public Github project [schmettow/YET](https://github.com/schmettow/YET/)
+- OBS Studio
 
 # Yet catalogue
 
@@ -83,34 +83,56 @@ The strength of Yet0 are its very low price. Clip-Y is a very simple shape that
 [Yeti2](https://github.com/schmettow/YET/tree/main/yeti/2) is a demonstration of brightness gradient estimation for eye tracking.
 
 -   uses OC and PG
--   split-frame brightness gradient
+-   split-frame brightness gradient (SBG)
 -   needs calibration by setting variables
 -   connects with Yeti3 for automated calibration
+
+## Yeti3
+
+[Yeti3](https://github.com/schmettow/YET/tree/main/yeti/3) collects SBG values at random horizontal eye positions.
+It produces a data set with x_pos|SBG_left|SBG_right, which can be used as training data for a model that predicts 
+horizontal position by SBG. An R Markdown script is provided that loads the data set and helps identifying the most 
+accurate prediction model.
+
+### Roadmaps
+
+#### Tracking
+
+1. Does SBG also work for vertical eye position? For a quick test, you have to flip everything around 90 degree.
+1. If vertical SBG works, Yeti3 can be extended to collect data in a plane. Model selection works the same way, but needs to be extended.
+Note that you get four brightness predictors.
+1. Finally, the prediction model can be implemented in Python to create a full calibration procedure.
 
 
 ## Yeti8
 
 [Yeti8](https://github.com/schmettow/YET/tree/main/yeti/8) performs a two-point calibration procedure.
 
-This Yeti demonstration of horizontal brightness gradient tracking. With [Yeti3](https://github.com/schmettow/YET/tree/main/yeti/3) it could be observed that eyeball position x and brightness y are linearly related. 
+This Yeti demonstration of horizontal brightness gradient tracking. With [Yeti3](https://github.com/schmettow/YET/tree/main/yeti/3) it could be observed that eyeball position P and brightness B are linearly related. 
 
-    x = beta_0 * beta_1 * y
+    P = beta_0 * beta_1 * B
 
-In theory that means, you only have to measure brightness at two points (A,B) and estimate the linear coefficients using the following formula:
+In theory that means, you only have to measure brightness at two points (a,b) and estimate the linear coefficients using the following formula:
 
-    beta_0 = y_A
-    beta_1 = (y_B - y_A) / (x_B - x_A)
+    beta_0 = B_a
+    beta_1 = (B_b - B_a) / (P_b - P_a)
 
 Then, Yeti8 continues measuring brightness and shows a circle that follows horizontal eye movements.
 
 
 ### Roadmaps
 
+#### Improve UI
+
+1. There are many minor ways to improve the visual layout and color scheme.
+1. Screen dimensions are fixed. Make them fluid (i.e. when screen dimensions change, the layout stays consistent)
+1. Add a life visualization of the brighness difference
+
 
 #### Improve tracking
 
 1. The obvious improvement is to add *vertical tracking*.
-1. The current algorithm uses the difference between brightness, whereas the linear model in [Yeti3](https://github.com/schmettow/YET/tree/main/yeti/3) uses L and R as separate predictors, which is the most accurate. In Python, you can implement a linear model using, for example,  [Scikit.Learn](https://stackabuse.com/linear-regression-in-python-with-scikit-learn/).
+1. The current algorithm uses the difference between brightness, whereas the linear model in [Yeti3](https://github.com/schmettow/YET/tree/main/yeti/3) uses L and R as separate predictors, which is the most accurate. In Python, you can implement a linear model using [Scikit.Learn](https://stackabuse.com/linear-regression-in-python-with-scikit-learn/).
 
 #### Validate
 
@@ -127,7 +149,33 @@ Yeti8 is a good precursor for programming experiments, where a quick re-calibrat
 1. Recombine Yeti8 with the Corsi block tapping task
 1. Implement an approach-avoidance task
 
-#### Assistive technology
+
+## Yeti9
+
+[Yeti9](https://github.com/schmettow/YET/tree/main/yeti/9) captures the Yet stream and the cam stream (web cam).
+The display can toggle face/eye detection and pair vs picture in picture layout.
+
+### Roadmaps
+
+#### Improve UI
+
+
+#### Improve tracking
+
+1. Yeti9 shows how face tracking works, and that can be a first step towards head tracking. 
+The face usually moves when we turn our heads, and gets smaller. 
+The procedure of Yeti3 can be used to measure face position/size at different 
+positions. Is it linear? Then headtracking can be calibrated quickly (Yeti8)
+1. OpenCV has a number of detection and tracking mechanisms. HAAR cascades are actually very advanced. 
+If your YET has a discernible color, e.g. orange, then it possible to detect and track it. 
+YET sits further further away from your neck than your face. It travels more and could be used as another 
+predictor for head position.
+
+#### Validate
+
+#### Experimentation
+
+
 
 
 
