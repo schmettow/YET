@@ -28,7 +28,7 @@ YET = cv2.VideoCapture(1)
 if not YET.isOpened():
         print('Unable to load camera.')
         exit()
-eyeCascade = cv2.CascadeClassifier("./models/haarcascade_eye.xml")
+eyeCascade = cv2.CascadeClassifier("./trained_models/haarcascade_eye.xml")
 
 # PG
 
@@ -60,26 +60,18 @@ font = pg.font.Font(None, 60)
 def main():
     
     ## Initial State
-    STATE = "Stream" # Detected, Closed
-    BACKGR_COL = col_black
-    T_Blink = 999.99
+    STATE = "Start"
+    last_Detected = False
+    Detected = False
+    T_Open = 0
+    T_Blink = 0
+    N_Open = 0
+    N_Blink = 0
+    Colors = (col_red, col_yellow, col_green)
     
     ## FAST LOOP
     while True:
-        pg.display.get_surface().fill(BACKGR_COL) 
-        ## Event handling
-        for event in pg.event.get():
-            # Interactive transition conditionals (ITC)
-            if STATE == "Stream":
-                pass
-            elif STATE == "Detected":
-                pass
-            if event.type == QUIT:
-                YET.release()
-                pg.quit()
-                sys.exit()
-            
-        # Frame capturing and unconditional processing
+        # Frame processing
         ret, Frame = YET.read(1)
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
@@ -90,42 +82,59 @@ def main():
                 scaleFactor=1.1,
                 minNeighbors=5,
                 minSize=(200, 200))
+        
+        # Conditional frame processing
         if len(Eyes) > 0:
             (x, y, w, h) = Eyes[0]
-            F_eye = F_gray[y:y+h,x:x+w]
+            last_Detected = Detected
+            Detected = True
+            if STATE == "Measure":
+                F_out = Frame[y:y+h,x:x+w]
+            elif STATE == "Start":
+                F_out = cv2.rectangle(Frame, (x, y), (x + w, y + h) , (0, 255, 0), 2)
 
-        # Automatic transitionals
-        if STATE == "Stream":
-            if len(Eyes) > 0:
-                print("Eye detected")
-                STATE = "Detected"
-        elif STATE == "Detected":
-            if len(Eyes) == 0:
-                print("Closed")
-                STATE = "Closed"
-                T_Closed_on = time()
-        elif STATE == "Closed":
-            if len(Eyes) > 0:
-                STATE = "Detected"
-                T_Blink = time() - T_Closed_on
-                print(round(T_Blink, 2))
+        else:
+            F_out = Frame
+            last_Detected = Detected
+            Detected = False
         
+        ## Detecting a blink start and end
+        if STATE == "Measure" and not Detected == last_Detected:
+            if not Detected: # blink start
+                T_Closed = time()
+                T_Open = T_Opened - T_Closed
+                N_Blink = N_Blink + 1
+            if Detected:     # blink end
+                T_Opened = time()
+                T_Blink = T_Closed - T_Opened
+                N_Open += 1
+
+        ## Event handling
+        for event in pg.event.get():
+            # Interactive transition conditionals (ITC)
+            if event.type == KEYDOWN and event.key == K_SPACE and Detected:
+                if STATE == "Start":
+                    STATE = "Measure"
+                    T_Opened = time()
+                    print(STATE)
+                elif STATE == "Measure":
+                    STATE = "Start"
+                    print(STATE)
+            if event.type == QUIT:
+                YET.release()
+                pg.quit()
+                sys.exit()
+            
+
         # Presentitionals
-        if STATE == "Stream":
+        if STATE == "Start":
             BACKGR_COL = col_white
-            Img = frame_to_surf(Frame, (900, 700))
-            SCREEN.blit(Img,(50,50))
-
-        if STATE == "Detected":
-            BACKGR_COL = col_black
-            Img = frame_to_surf(F_eye, (900, 700))
-            SCREEN.blit(Img,(50,50))
-            draw_text("Last blink (s): " + str(round(T_Blink, 2)), (10, 10))
-
-        if STATE == "Closed":
-            BACKGR_COL = col_red_dim
-            Img = frame_to_surf(F_gray, (900, 700))
-            SCREEN.blit(Img,(50,50))
+        if STATE == "Measure":
+            BACKGR_COL = Colors[N_Blink % len(Colors)] ## modulo to cycle through colors
+        SCREEN.fill(BACKGR_COL)
+        draw_text("Last blink (s): " + str(round(T_Blink, 2)), (10, 10))
+        Img = frame_to_surf(F_out, (900, 700))
+        SCREEN.blit(Img,(50,50))
         
         # update the screen to display the changes you made
         pg.display.update()
