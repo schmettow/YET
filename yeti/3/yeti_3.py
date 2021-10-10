@@ -2,6 +2,12 @@
 ## uses PyGame for interaction programming
 ## Output: Raw data brightness values per horizontal position
 
+YETI = 3
+YETI_NAME = "Yeti" + str(YETI)
+TITLE = "Measuring the horizontal brightness gradient"
+AUTHOR = "M Schmettow"
+
+
 import sys
 import logging as log
 import datetime as dt
@@ -31,7 +37,7 @@ if YET.isOpened():
 else:
     print('Unable to load camera.')
     exit()
-eyeCascade = cv2.CascadeClassifier("./models/haarcascade_eye.xml")
+eyeCascade = cv2.CascadeClassifier("./trained_models/haarcascade_eye.xml")
 
 # PG
 
@@ -51,7 +57,7 @@ SCREEN_SIZE = (1000, 800)
 
 pg.init()
 pg.display.set_mode(SCREEN_SIZE)
-pg.display.set_caption("YETI_3: Measuring brightness distribution")
+pg.display.set_caption("YETI_3: Measuring vertical brightness distribution")
 FONT = pg.font.Font('freesansbold.ttf',40)
 
 SCREEN = pg.display.get_surface()
@@ -76,7 +82,7 @@ def main():
     while True:
         pg.display.get_surface().fill(BACKGR_COL) 
 
-        # General frame processing
+        # Frame processing
         ret, Frame = YET.read(1)
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
@@ -87,6 +93,7 @@ def main():
                 scaleFactor=1.1,
                 minNeighbors=5,
                 minSize=(200, 200))
+        # Frame conditionals
         if len(Eyes) > 0:
             DETECTED = True
             (x, y, w, h) = Eyes[0]
