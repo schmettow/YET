@@ -1,4 +1,9 @@
-## YETI_6: Simple blink detection and duration measures
+## YETI_6: Blink detection and duration measures
+
+YETI = 6
+YETI_NAME = "Yeti" + str(YETI)
+TITLE = "Blink detection"
+AUTHOR = "M Schmettow"
 
 import sys
 import logging as log
