@@ -106,23 +106,30 @@ def main():
                     STATE = "Measure_R"
                     sbg_L = sbg_diff #collecting left SBG_diff
                     print(STATE)
+                elif event.type == KEYDOWN and event.key == K_BACKSPACE:
+                    STATE = "Detect"
+                    print(STATE)
             elif STATE == "Measure_R":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Follow"
                     sbg_R = sbg_diff #collecting left SBG_diff
                     sbg_coef = SBG_fit(sbg_L, sbg_R, 10, 990) # fitting the model ;)
                     print(STATE)
+                elif event.type == KEYDOWN and event.key == K_BACKSPACE:
+                    STATE = "Measure_L"
+                    print(STATE)
             elif STATE == "Follow":
                 if event.type == KEYDOWN:
                     if event.key == K_SPACE:
                         write_csv(sbg_coef) # save coefficients 
                         STATE = "Saved"
-                    elif event.key == K_RETURN:
-                        STATE = "Measure_L"  
-                    print(STATE)
+                        print(STATE)
+                    elif event.key == K_BACKSPACE:
+                        STATE = "Measure_L"
+                        print(STATE)
             elif STATE == "Saved":
                 if event.type == KEYDOWN:
-                    if event.key == K_SPACE:
+                    if event.key == K_BACKSPACE:
                         STATE = "Follow"
                     elif event.key == K_RETURN:
                         STATE = "Measure_L"
@@ -131,11 +138,11 @@ def main():
                 YET.release()
                 pg.quit()
                 sys.exit()
+                
 
 
         # Automatic transitionals
-        pass
-                
+            
 
         # Presentitionals
         BACKGR_COL = col_black
@@ -151,20 +158,20 @@ def main():
             msg = "When eye is detected, press Space"
 
         if STATE == "Measure_L":
-            msg = "Focus on the circle to your Left and press Space"
+            msg = "Focus on the circle to your Left and press Space. Return for back"
             draw_circ(10, SCREEN_SIZE[1]/2, 20, stroke_size=5)
 
         if STATE == "Measure_R":
-            msg = "Focus on the circle to your Right and press Space"
+            msg = "Focus on the circle to your Right and press Space. Return for back"
             draw_circ(SCREEN_SIZE[0]-10, SCREEN_SIZE[1]/2, 20, stroke_size=5)
 
         if STATE == "Follow":
-            msg = "Space for saving, Return for re-calibration."
+            msg = "Press Space for saving. Return for back"
             x_pos = SBG_predict(sbg_diff, sbg_coef)
             draw_circ(x_pos, SCREEN_SIZE[1]/2, 40 ,  stroke_size=10, color=(0, 255, 255))
         
         if STATE == "Saved":
-            msg = "SBG.csv saved. Space: follow, Return: re-calibration."
+            msg = "SBG.csv saved. Return to Follow."
         
         # Fixed UI elements
         draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .9), color=col_gray)
