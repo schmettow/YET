@@ -6,6 +6,7 @@ YETI = 3
 YETI_NAME = "Yeti" + str(YETI)
 TITLE = "Measuring the horizontal brightness gradient"
 AUTHOR = "M Schmettow"
+CSV = "Brightness_H.csv"
 
 
 import sys
@@ -135,7 +136,7 @@ def main():
             Bright_diff.append(bright_diff)
             STATE = "Prepare"
         elif STATE == "Save":
-            myfile =  open("Brightness.csv", mode = "w")
+            myfile =  open(CSV, mode = "w")
             writer = csv.writer(myfile)
             for i in range(0, len(X_Stim)):
                 thisrow = [X_Stim[i], Bright_L[i], Bright_R[i], Bright_diff[i]]

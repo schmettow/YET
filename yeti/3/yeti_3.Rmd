@@ -12,7 +12,7 @@ library(tidyverse)
 ```{r}
 fov <- 40 # field of view
 
-D_yeti3 <- read_csv("Brightness.csv", 
+D_yeti3 <- read_csv("Brightness_H.csv", 
                     col_names = c("x", "bright_L", "bright_R", "bright_diff"),
                     col_types = cols(
                       x = col_double(),
@@ -22,29 +22,24 @@ D_yeti3 <- read_csv("Brightness.csv",
                     )) %>% 
   mutate(angle = x/fov)
 ```
-```{r}
-D_yeti3 %>% 
-  ggplot(aes(x = angle)) +
-  geom_point(aes(y = bright_L, col = "L")) +
-  geom_point(aes(y = bright_R, col = "R")) +
-  geom_smooth(aes(y = bright_L, col = "L")) +
-  geom_smooth(aes(y = bright_R, col = "R"))
-```
+
 
 ```{r}
 D_yeti3 %>% 
   ggplot(aes(y = angle)) +
-  geom_point(aes(x = bright_L, col = "L")) +
-  geom_point(aes(x = bright_R, col = "R")) +
-  geom_smooth(aes(x = bright_L, col = "L")) +
-  geom_smooth(aes(x = bright_R, col = "R"))
+  geom_point(aes(x = bright_L, col = "Top")) +
+  geom_point(aes(x = bright_R, col = "Bot")) +
+  geom_smooth(aes(x = bright_L, col = "Top")) +
+  geom_smooth(aes(x = bright_R, col = "Bot")) +
+  labs(col = "Frame")
 ```
 
 ```{r}
 M_0 <- lm(x ~ bright_L * bright_R, data = D_yeti3)
 M_1 <- lm(x ~ bright_L + bright_R, data = D_yeti3)
-M_2 <- lm(x ~ bright_L, data = D_yeti3)
-M_3 <- lm(x ~ bright_R, data = D_yeti3)
+M_2 <- lm(x ~ bright_diff, data = D_yeti3)
+M_3 <- lm(x ~ bright_L, data = D_yeti3)
+M_4 <- lm(x ~ bright_R, data = D_yeti3)
 
 AIC(M_0, M_1, M_2, M_3) %>% 
   arrange(AIC)
