@@ -4,6 +4,12 @@
 # is linearly related to horizontal eye ball position.
 # This Yeti shows a quick calibration based on only two points
 
+YETI = 8
+YETI_NAME = "Yeti" + str(YETI)
+TITLE = YETI_NAME + ": Quick calibration and follow"
+AUTHOR = "M Schmettow"
+
+DEBUG = False
 
 import sys
 import logging as log
@@ -18,6 +24,14 @@ import cv2
 import pygame as pg
 from pygame.locals import *
 from pygame.compat import unichr_, unicode_
+
+
+##### DEFINITIONS ####
+
+## width and height in pixel
+SCREEN_SIZE = (1600, 800)
+SCREEN_WIDTH = SCREEN_SIZE[0]
+XPOS  = (20, SCREEN_WIDTH - 20) ## x points for measuring
 
 ##### Preparations #####
 
@@ -38,6 +52,7 @@ col_black = (0, 0, 0)
 col_gray = (120, 120, 120)
 col_red = (250, 0, 0)
 col_green = (0, 255, 0)
+col_blue = (0, 0, 255)
 col_yellow = (250, 250, 0)
 col_white = (255, 255, 255)
 
@@ -45,13 +60,11 @@ col_red_dim = (120, 0, 0)
 col_green_dim = (0, 60, 0)
 col_yellow_dim = (120,120,0)
 
-## width and height in pixel
-SCREEN_SIZE = (1000, 800)
 
 # initialize PG window
 pg.init()
 pg.display.set_mode(SCREEN_SIZE)
-pg.display.set_caption("Yeti8: quick calibration and follow")
+pg.display.set_caption(TITLE)
 
 FONT = pg.font.Font('freesansbold.ttf',20)
 SCREEN = pg.display.get_surface()
@@ -83,7 +96,7 @@ def main():
                 scaleFactor=1.1,
                 minNeighbors=5,
                 minSize=(200, 200))
-            # when eye is detected, change state and store coordinates
+            # when eye is detected, set the trigger, store the rectangle and get the subframe
             if len(Eyes) > 0:
                 Detected = True
                 (x, y ,w , h) = Eyes[0]
@@ -95,44 +108,38 @@ def main():
 
         ## Event handling
         for event in pg.event.get():
-            # Interactive transition conditionals (ITC)
-            if STATE == "Detect":
-                if event.type == KEYDOWN and event.key == K_SPACE:
-                    if Detected:
-                        STATE = "Measure_L"
-                        print(STATE)
-            elif STATE == "Measure_L":
-                if event.type == KEYDOWN and event.key == K_SPACE:
-                    STATE = "Measure_R"
-                    sbg_L = sbg_diff #collecting left SBG_diff
-                    print(STATE)
-                elif event.type == KEYDOWN and event.key == K_BACKSPACE:
-                    STATE = "Detect"
-                    print(STATE)
-            elif STATE == "Measure_R":
-                if event.type == KEYDOWN and event.key == K_SPACE:
-                    STATE = "Follow"
-                    sbg_R = sbg_diff #collecting left SBG_diff
-                    sbg_coef = SBG_fit(sbg_L, sbg_R, 10, 990) # fitting the model ;)
-                    print(STATE)
-                elif event.type == KEYDOWN and event.key == K_BACKSPACE:
-                    STATE = "Measure_L"
-                    print(STATE)
-            elif STATE == "Follow":
-                if event.type == KEYDOWN:
+            if event.type == KEYDOWN:
+                # Interactive transition conditionals (ITC)
+                if STATE == "Detect":
                     if event.key == K_SPACE:
-                        write_csv(sbg_coef) # save coefficients 
-                        STATE = "Saved"
-                        print(STATE)
+                        if Detected:
+                            STATE = "Measure_L"
+                elif STATE == "Measure_L":
+                    if event.key == K_SPACE:
+                        STATE = "Measure_R"
+                        sbg_1 = sbg_diff #collecting left SBG_diff
+                    elif event.key == K_BACKSPACE:
+                        STATE = "Detect"
+                elif STATE == "Measure_R":
+                    if event.key == K_SPACE:
+                        STATE = "Follow"
+                        sbg_2 = sbg_diff #collecting right SBG_diff
+                        sbg_coef = SBG_fit(sbg_1, sbg_2, XPOS[0], XPOS[1]) # fitting the model
+                        print((sbg_1, sbg_2), sbg_coef)
                     elif event.key == K_BACKSPACE:
                         STATE = "Measure_L"
-                        print(STATE)
-            elif STATE == "Saved":
-                if event.type == KEYDOWN:
+                elif STATE == "Follow":
+                    if event.key == K_SPACE:
+                        write_csv(sbg_coef) # save coefficients 
+                        STATE = "Save"
+                    elif event.key == K_BACKSPACE:
+                        STATE = "Measure_R"
+                elif STATE == "Save":
                     if event.key == K_BACKSPACE:
                         STATE = "Follow"
-                    elif event.key == K_RETURN:
-                        STATE = "Measure_L"
+                    elif event.key == K_SPACE:
+                        STATE = "Detect"   ## ring closed
+                print(STATE)
 
             if event.type == QUIT:
                 YET.release()
@@ -142,10 +149,10 @@ def main():
 
 
         # Automatic transitionals
-            
+        pass
 
         # Presentitionals
-        BACKGR_COL = col_black
+        BACKGR_COL = col_white
         SCREEN.fill(BACKGR_COL)
         
         if Detected:
@@ -158,23 +165,24 @@ def main():
             msg = "When eye is detected, press Space"
 
         if STATE == "Measure_L":
-            msg = "Focus on the circle to your Left and press Space. Return for back"
-            draw_circ(10, SCREEN_SIZE[1]/2, 20, stroke_size=5)
+            msg = "Focus on the circle to your Left and press Space.  Backspace for back."
+            draw_circ(XPOS[0], SCREEN_SIZE[1]/2, 20, stroke_size=5, color = col_black)
 
         if STATE == "Measure_R":
-            msg = "Focus on the circle to your Right and press Space. Return for back"
-            draw_circ(SCREEN_SIZE[0]-10, SCREEN_SIZE[1]/2, 20, stroke_size=5)
+            msg = "Focus on the circle to your Right and press Space. Backspace for back."
+            draw_circ(XPOS[1], SCREEN_SIZE[1]/2, 20, color = col_black, stroke_size=5)
 
         if STATE == "Follow":
-            msg = "Press Space for saving. Return for back"
+            msg = "Press Space for saving.  Backspace for back."
             x_pos = SBG_predict(sbg_diff, sbg_coef)
-            draw_circ(x_pos, SCREEN_SIZE[1]/2, 40 ,  stroke_size=10, color=(0, 255, 255))
+            print(sbg_diff, x_pos)
+            draw_circ(x_pos, SCREEN_SIZE[1]/2, 40 ,  stroke_size=10, color = col_blue)
         
         if STATE == "Saved":
-            msg = "SBG.csv saved. Return to Follow."
+            msg = "SBG.csv saved. Backspace for back.  Space for new cycle"
         
         # Fixed UI elements
-        draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .9), color=col_gray)
+        draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .9), color=col_black)
         SCREEN.blit(Img,(50,50))
                     
         # update the screen to display the changes you made
@@ -193,15 +201,17 @@ def SBG_diff(frame):
 
 
 # Estimates linear coefficients from two points and their brightness diff
-def SBG_fit(diff_L, diff_R, margin_L, margin_R):
+def SBG_fit(diff_L, diff_R, x_L, x_R):
     beta_0 = diff_L
-    beta_1 = (margin_R - margin_L)/(diff_R - diff_L)
+    beta_1 = (x_R - x_L)/(diff_R - diff_L)
     return (beta_0, beta_1)
 
 
 # Predicts x position based on BGS diff and BGS coefficients
 def SBG_predict(bright_diff, beta):
-    return beta[0] + bright_diff * beta[1]
+    x_pos = beta[0] + bright_diff * beta[1]
+    if DEBUG: print(str(int(bright_diff)) + " --> " + str(int(x_pos)))
+    return x_pos
 
 
 ## Converts a CV2 framebuffer into Pygame image (surface!)
