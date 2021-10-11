@@ -1,8 +1,13 @@
 ## Yeti9: Dual cam viewer
 
-# Captures two streams and displays them
+# Captures streams from YET and webcam and displays them
 # Space toggles eye/face detection mode
-# Return toggles layout
+# Return toggles layout (Pair, PIP)
+
+YETI = 9
+YETI_NAME = "Yeti" + str(YETI)
+TITLE = YETI_NAME + ": Dual cam viewer"
+AUTHOR = "M Schmettow"
 
 
 import sys
@@ -58,7 +63,7 @@ SCREEN_SIZE = (1000, 800)
 # initialize PG window
 pg.init()
 pg.display.set_mode(SCREEN_SIZE)
-pg.display.set_caption("Yeti9: Dual tracking")
+pg.display.set_caption(TITLE)
 
 FONT = pg.font.Font('freesansbold.ttf',20)
 SCREEN = pg.display.get_surface()
