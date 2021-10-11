@@ -82,10 +82,10 @@ The strength of Yet0 are its very low price. Clip-Y is a very simple shape that
 
 [Yeti2](https://github.com/schmettow/YET/tree/main/yeti/2) is a demonstration of brightness gradient estimation for eye tracking.
 
--   uses OC and PG
--   split-frame brightness gradient (SBG)
+-   CV-only
+-   frame processing: split-frame, brightness average
 -   needs calibration by setting variables
--   connects with Yeti3 for automated calibration
+-   
 
 ## Yeti3
 
@@ -103,6 +103,27 @@ accurate prediction model.
 Note that you get four brightness predictors.
 1. Finally, the prediction model can be implemented in Python to create a full calibration procedure.
 
+## Yeti4
+
+In the future Yeti4 will be an upgraded version of Yeti3, that estimates the linear model by itself.
+
+## Yeti5
+
+CV2/Pygame Streamplayer with snaphot function
+
+## Yeti6
+
+Blink detection, duration measures and a ring
+
+- eye detection
+- blink detection
+- timestamp method
+- the eyetracker as an input device
+
+
+## Yeti7
+
+In teh future, Yeti7 is a PG/CV program to measure the accuracy of SBG
 
 ## Yeti8
 
@@ -176,13 +197,15 @@ predictor for head position.
 #### Experimentation
 
 
-
-
-
 #### Design
 
 1. An advantage of using linear regression is that the predicted x positions come with information on uncertainty (e.g. confidence limits). This can be used to adjust the circle size in Follow mode.
 
-    
+## Yeti10 
+
+Yeti10 re-iterates on the Cam stream, which strictly makes it *not a Yet interface* (NYETI).
+Like in Yeti9, faces are detected. When the user takes a snapshot, the facial emotional expression 
+is analyzed (library FER).
+
 
 
