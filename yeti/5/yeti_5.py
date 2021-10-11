@@ -1,4 +1,9 @@
-## CV2/Pygame Streamplayer with snaphot function
+## Yeti5: CV2/Pygame Streamplayer with snaphot function
+
+YETI = 5
+YETI_NAME = "Yeti" + str(YETI)
+TITLE = YETI_NAME + ": Streamplayer with Snapshot"
+AUTHOR = "M Schmettow"
 
 import sys
 import logging as log
@@ -56,10 +61,16 @@ def main():
     
     STATE = "Stream"
     ## PG
-    
     print("Canvas size is (" + str(SCREEN_SIZE[0]) + "," + str(SCREEN_SIZE[1]) + ")")
     print("(0,0) is the upper left corner")    
     while True:
+        # Frame Processing
+        if STATE == "Stream":
+            ret, Frame = YET.read(1)
+            if not ret:
+                print("Can't receive frame (stream end?). Exiting ...")
+                break
+
         # PG
         pg.display.get_surface().fill(BACKGR_COL) 
         ## Event handling
@@ -67,6 +78,7 @@ def main():
             # Interactive transition conditionals (ITC)
             if STATE == "Stream":
                 if event.type == KEYDOWN and event.key == K_SPACE:
+                    F_snap = Frame
                     STATE = "Captured"
                     print("Captured")
             elif STATE == "Captured":
@@ -78,14 +90,6 @@ def main():
                 pg.quit()
                 sys.exit()
             
-        # Conditional Processing
-        if STATE == "Stream":
-            ret, Frame = YET.read(1)
-            if not ret:
-                print("Can't receive frame (stream end?). Exiting ...")
-                break
-        if STATE == "Captured":
-            captured_Frame = Frame
 
         # Presentitionals
         if STATE == "Stream":
@@ -93,7 +97,7 @@ def main():
             screen.blit(Img,(50,50))
 
         if STATE == "Captured":
-            Img = frame_to_surf(captured_Frame, (900, 700))
+            Img = frame_to_surf(F_snap, (900, 700))
             screen.blit(Img,(50,50))
         
         # update the screen to display the changes you made
