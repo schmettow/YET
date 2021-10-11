@@ -56,6 +56,16 @@ The programming techniques for development of Yetis will be introduced in the fo
 
 The third idea of YET is that replacing a few expensive eye trackers with *an armada of cheap ones, can be transformative for research*. In the future, we expect to be able to build *Yet appliances (Yeta)*, such as mobile recording devices, novel user interfaces or assistive technologies.
 
+## Definitions
+
+1. An *eye tracker* is a device that measures the degree of rotation of the eyeball in the skull. YET0/Yet8 is an example.
+2. A *head tracker* is a device that measures the position of the head in the world.
+3. A *gaze tracker* is a combination of head and eye tracking that measures the perspective in the world (literally, not figuratively).
+4. A device that also produces a video stream from the perspective of the user is said to *have a world view*.
+5. A *world model* describes the spatial position of *areas-of-interest (AOI)* are, relative to the user's persperctive.
+One simple way is to create *rectangle-of-interests (ROI)* in the world view.
+
+
 # Tools
 
 - OBS Studio
@@ -69,12 +79,10 @@ The third idea of YET is that replacing a few expensive eye trackers with *an ar
 The strength of Yet0 are its very low price. Clip-Y is a very simple shape that
 
 -   used minimal material (1- 2g)
-
 -   is almost indestructible by mechanical forces
-
--   can be printed without problems on *any* 3D printer
-
+-   can be printed without problems on *any* 3D pinter
 -   requires no post-processing
+
 
 # Yeti catalogue
 
