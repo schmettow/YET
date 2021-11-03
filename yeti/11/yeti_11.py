@@ -1,8 +1,7 @@
-## Yeti8: Two point calibration
+## Yeti11: Four point calibration
 
-# Experiments with Yeti2 showed, that teh split-frame brighness gradient
-# is linearly related to horizontal eye ball position.
-# This Yeti shows a quick calibration based on only two points
+# This Yeti is a modification of yeti 8
+# It shows a quick calibration based on four points (vertical + horizontal)
 
 
 import sys
