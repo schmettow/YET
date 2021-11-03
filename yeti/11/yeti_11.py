@@ -3,7 +3,6 @@
 # This Yeti is a modification of yeti 8
 # It shows a quick calibration based on four points (vertical + horizontal)
 
-
 import sys
 import logging as log
 import datetime as dt
