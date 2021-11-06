@@ -31,7 +31,7 @@ from pygame.compat import unichr_, unicode_
 ## width and height in pixel
 SCREEN_SIZE = (1600, 800)
 SCREEN_WIDTH = SCREEN_SIZE[0]
-XPOS  = (20, SCREEN_WIDTH - 20) ## x points for measuring
+HPOS  = (20, SCREEN_WIDTH - 20) ## x points for measuring
 
 ##### Preparations #####
 
@@ -66,7 +66,7 @@ pg.init()
 pg.display.set_mode(SCREEN_SIZE)
 pg.display.set_caption(TITLE)
 
-FONT = pg.font.Font('freesansbold.ttf',20)
+FONT = pg.font.Font('freesansbold.ttf',40)
 SCREEN = pg.display.get_surface()
 font = pg.font.Font(None, 15)
 
@@ -76,6 +76,8 @@ def main():
     STATE = "Detect" #  Measure_L, Measure_R, Follow, Save
     Detected = False
     Eyes = []
+    SBD = 0
+    H_offset = 0
 
     
     ## FAST LOOP
@@ -104,7 +106,7 @@ def main():
         # in all other states, we only extract teh eye frane and compute SBG_diff
         else:
             F_eye = F_gray[y:y+h,x:x+w]
-            sbg_diff = SBG_diff(F_eye)
+            SBD = calc_SBD(F_eye)
 
         ## Event handling
         for event in pg.event.get():
@@ -116,21 +118,26 @@ def main():
                             STATE = "Measure_L"
                 elif STATE == "Measure_L":
                     if event.key == K_SPACE:
+                        SBD_L = SBD #collecting left SBG_diff
+                        if DEBUG: print(SBD_L)
                         STATE = "Measure_R"
-                        sbg_1 = sbg_diff #collecting left SBG_diff
                     elif event.key == K_BACKSPACE:
                         STATE = "Detect"
                 elif STATE == "Measure_R":
                     if event.key == K_SPACE:
+                        SBD_R = SBD #collecting right SBG_diff
+                        SBD_coef = train_SBD((SBD_L, SBD_R), HPOS) # fitting the model
+                        print("Model:" + str(SBD_L) + str(SBD_R) + str(SBD_coef))
                         STATE = "Follow"
-                        sbg_2 = sbg_diff #collecting right SBG_diff
-                        sbg_coef = SBG_fit(sbg_1, sbg_2, XPOS[0], XPOS[1]) # fitting the model
-                        print((sbg_1, sbg_2), sbg_coef)
                     elif event.key == K_BACKSPACE:
                         STATE = "Measure_L"
                 elif STATE == "Follow":
+                    if event.key == K_LEFT:
+                        H_offset -= 5
+                    if event.key == K_RIGHT:
+                        H_offset += 5
                     if event.key == K_SPACE:
-                        write_csv(sbg_coef) # save coefficients 
+                        write_csv(SBD_coef) # save coefficients 
                         STATE = "Save"
                     elif event.key == K_BACKSPACE:
                         STATE = "Measure_R"
@@ -166,17 +173,20 @@ def main():
 
         if STATE == "Measure_L":
             msg = "Focus on the circle to your Left and press Space.  Backspace for back."
-            draw_circ(XPOS[0], SCREEN_SIZE[1]/2, 20, stroke_size=5, color = col_black)
+            draw_circ(HPOS[0], SCREEN_SIZE[1]/2, 20, stroke_size=5, color = col_black)
 
         if STATE == "Measure_R":
             msg = "Focus on the circle to your Right and press Space. Backspace for back."
-            draw_circ(XPOS[1], SCREEN_SIZE[1]/2, 20, color = col_black, stroke_size=5)
+            draw_circ(HPOS[1], SCREEN_SIZE[1]/2, 20, color = col_black, stroke_size=5)
 
         if STATE == "Follow":
             msg = "Press Space for saving.  Backspace for back."
-            x_pos = SBG_predict(sbg_diff, sbg_coef)
-            print(sbg_diff, x_pos)
-            draw_circ(x_pos, SCREEN_SIZE[1]/2, 40 ,  stroke_size=10, color = col_blue)
+            H_pos = predict_HPOS(SBD, SBD_coef)
+            draw_circ(H_pos +  + H_offset, SCREEN_SIZE[1]/2, 40 ,  stroke_size=10, color = col_blue)
+            draw_text("COEF: " + str(np.round(SBD_coef, 2)), (50, 300), color=col_black)
+            draw_text("SBD : " + str(np.round(SBD)), (50, 400), color=col_black)
+            draw_text("HPOS: " + str(np.round(H_pos)), (50, 500), color=col_black)
+            draw_text("XOFF: " + str(H_offset), (50, 600), color=col_black)
         
         if STATE == "Saved":
             msg = "SBG.csv saved. Backspace for back.  Space for new cycle"
@@ -189,29 +199,33 @@ def main():
         pg.display.update()
 
 
-# Estimates the split-frame brightness diff
-def SBG_diff(frame):
-    height, width = frame.shape
-    F_left =  frame[0:height, 0:int(width/2)]
-    F_right = frame[0:height, int(width/2):width]
+# splits a frame horizontally
+def split_frame(Frame):
+    height, width = Frame.shape
+    F_left =  Frame[0:height, 0:int(width/2)]
+    F_right = Frame[0:height, int(width/2):width]
+    return F_left, F_right
+
+# Computes the split-frame brightness diff
+def calc_SBD(Frame):
+    F_left, F_right = split_frame(Frame)
     bright_left = np.mean(F_left)
     bright_right = np.mean(F_right)
-    bright_diff = bright_left - bright_right
-    return bright_diff
+    sbd = bright_right - bright_left
+    return sbd
 
 
 # Estimates linear coefficients from two points and their brightness diff
-def SBG_fit(diff_L, diff_R, x_L, x_R):
-    beta_0 = diff_L
-    beta_1 = (x_R - x_L)/(diff_R - diff_L)
+def train_SBD(SBD, X):
+    beta_1 = (X[1] - X[0])/(SBD[1] - SBD[0])
+    beta_0 = X[0] - SBD[0] * beta_1 
     return (beta_0, beta_1)
 
 
-# Predicts x position based on BGS diff and BGS coefficients
-def SBG_predict(bright_diff, beta):
-    x_pos = beta[0] + bright_diff * beta[1]
-    if DEBUG: print(str(int(bright_diff)) + " --> " + str(int(x_pos)))
-    return x_pos
+# Predicts x position based on SBD and SBD coefficients
+def predict_HPOS(sbd, coef):
+    H_pos = coef[0] + sbd * coef[1]
+    return H_pos
 
 
 ## Converts a CV2 framebuffer into Pygame image (surface!)
