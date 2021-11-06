@@ -45,6 +45,8 @@ col_yellow_dim = (120,120,0)
 
 ## width and height in pixel
 SCREEN_SIZE = (1000, 800)
+WIDTH  = SCREEN_SIZE[0]
+HEIGHT = SCREEN_SIZE[1]
 
 # initialize PG window
 pg.init()
@@ -102,7 +104,7 @@ def main():
             elif STATE == "Measure_U":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Measure_D"
-                    sbg_U = sbg_diff[0] #collecting up SBG_diff (vertical)
+                    sbg_U = sbg_diff[0] #collecting up brightness diff (vertical)
                     print(STATE)
                 elif event.type == KEYDOWN and event.key == K_BACKSPACE:
                     STATE = "Detect"
@@ -110,8 +112,8 @@ def main():
             elif STATE == "Measure_D":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Measure_L"
-                    sbg_D = sbg_diff[0] #collecting down SBG_diff (vertical)
-                    sbg_coef_ver = SBG_fit(sbg_U, sbg_D, 10, 990) 
+                    sbg_D = sbg_diff[0] #collecting down brightness diff (vertical)
+                    sbg_coef_ver = SBG_fit(sbg_U, sbg_D, 10, WIDTH - 10) 
                     print(STATE)
                 elif event.type == KEYDOWN and event.key == K_BACKSPACE:
                     STATE = "Detect"
@@ -119,7 +121,7 @@ def main():
             elif STATE == "Measure_L":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Measure_R"
-                    sbg_L = sbg_diff[1] #collecting left SBG_diff (horizontal)
+                    sbg_L = sbg_diff[1] #collecting left brightness diff (horizontal)
                     print(STATE)
                 elif event.type == KEYDOWN and event.key == K_BACKSPACE:
                     STATE = "Detect"
@@ -127,7 +129,7 @@ def main():
             elif STATE == "Measure_R":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Follow"
-                    sbg_R = sbg_diff[1] #collecting right SBG_diff (horizontal)
+                    sbg_R = sbg_diff[1] #collecting right brightness diff (horizontal)
                     sbg_coef_hor = SBG_fit(sbg_L, sbg_R, 10, 990) 
                     print(STATE)
                 elif event.type == KEYDOWN and event.key == K_BACKSPACE:
@@ -136,7 +138,7 @@ def main():
             elif STATE == "Follow":
                 if event.type == KEYDOWN:
                     if event.key == K_SPACE:
-                        write_csv(sbg_coef_ver, sbg_coef_hor) # save coefficients in csv
+                        write_coef(sbg_coef_ver, sbg_coef_hor) # save coefficients in csv
                         STATE = "Saved"
                         print(STATE)
                     elif event.key == K_BACKSPACE:
@@ -263,7 +265,7 @@ def draw_circ(x, y, radius,
     pg.draw.circle(SCREEN, color, (x,y), radius, stroke_size)
 
 
-def write_csv(coef):
+def write_coef(coef_hor, coef_ver):
     pass
 
 main()
