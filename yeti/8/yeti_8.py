@@ -29,9 +29,10 @@ from pygame.compat import unichr_, unicode_
 ##### DEFINITIONS ####
 
 ## width and height in pixel
-SCREEN_SIZE = (1600, 800)
+SCREEN_SIZE = (2000, 500)
 SCREEN_WIDTH = SCREEN_SIZE[0]
-HPOS  = (20, SCREEN_WIDTH - 20) ## x points for measuring
+SCREEN_HEIGHT = SCREEN_SIZE[1]
+HPOS  = (40, SCREEN_WIDTH - 40) ## x points for measuring
 
 ##### Preparations #####
 
@@ -61,7 +62,7 @@ col_green_dim = (0, 60, 0)
 col_yellow_dim = (120,120,0)
 
 
-# initialize PG window
+# initialize Pygame
 pg.init()
 pg.display.set_mode(SCREEN_SIZE)
 pg.display.set_caption(TITLE)
@@ -87,12 +88,12 @@ def main():
         if not ret:
             print("Can't receive frame (stream end?). Exiting ...")
             break
-        # cvollecting a grayscale frame
+        # collecting a grayscale frame
         F_gray = cv2.cvtColor(Frame, cv2.COLOR_BGR2GRAY)
 
         # Conditional Frame Processing
         if STATE == "Detect":
-            # using the eye detection model
+            # using the eye detection model on the frame
             Eyes = eyeCascade.detectMultiScale(
                 F_gray,
                 scaleFactor=1.1,
@@ -126,16 +127,16 @@ def main():
                 elif STATE == "Measure_R":
                     if event.key == K_SPACE:
                         SBD_R = SBD #collecting right SBG_diff
-                        SBD_coef = train_SBD((SBD_L, SBD_R), HPOS) # fitting the model
-                        print("Model:" + str(SBD_L) + str(SBD_R) + str(SBD_coef))
-                        STATE = "Follow"
+                        STATE = "Train" # Automkatic Transitional
                     elif event.key == K_BACKSPACE:
                         STATE = "Measure_L"
-                elif STATE == "Follow":
+                elif STATE == "Validate":
                     if event.key == K_LEFT:
                         H_offset -= 5
                     if event.key == K_RIGHT:
                         H_offset += 5
+                    if event.key == K_DOWN:
+                        H_offset = 0
                     if event.key == K_SPACE:
                         write_csv(SBD_coef) # save coefficients 
                         STATE = "Save"
@@ -143,7 +144,7 @@ def main():
                         STATE = "Measure_R"
                 elif STATE == "Save":
                     if event.key == K_BACKSPACE:
-                        STATE = "Follow"
+                        STATE = "Validate"
                     elif event.key == K_SPACE:
                         STATE = "Detect"   ## ring closed
                 print(STATE)
@@ -156,45 +157,53 @@ def main():
 
 
         # Automatic transitionals
-        pass
+        if STATE == "Train":
+            SBD_coef = train_SBD((SBD_L, SBD_R), HPOS) # fitting the model
+            print("Model:" + str(SBD_L) + str(SBD_R) + str(SBD_coef))
+            STATE = "Validate"
+            print
 
         # Presentitionals
         BACKGR_COL = col_white
         SCREEN.fill(BACKGR_COL)
         
+        
+        # YET stream
         if Detected:
-            Img = frame_to_surf(F_eye, (200, 200))
+            Img = frame_to_surf(F_eye, (400, 400))
         else:
-            Img = frame_to_surf(F_gray, (200, 200))
-
+            Img = frame_to_surf(F_gray, (400, 400))
+        SCREEN.blit(Img,((SCREEN_WIDTH - 400)/2, (SCREEN_HEIGHT - 400)/2))
+        
         if STATE == "Detect":
             BACKGR_COL = col_red_dim
             msg = "When eye is detected, press Space"
 
         if STATE == "Measure_L":
             msg = "Focus on the circle to your Left and press Space.  Backspace for back."
-            draw_circ(HPOS[0], SCREEN_SIZE[1]/2, 20, stroke_size=5, color = col_black)
+            draw_circ(HPOS[0], SCREEN_HEIGHT/2, 20, stroke_size=10, color = col_red)
 
         if STATE == "Measure_R":
             msg = "Focus on the circle to your Right and press Space. Backspace for back."
-            draw_circ(HPOS[1], SCREEN_SIZE[1]/2, 20, color = col_black, stroke_size=5)
+            draw_circ(HPOS[1], SCREEN_HEIGHT/2, 20, color = col_red, stroke_size=10)
 
-        if STATE == "Follow":
+        if STATE == "Validate":
             msg = "Press Space for saving.  Backspace for back."
             H_pos = predict_HPOS(SBD, SBD_coef)
-            draw_circ(H_pos +  + H_offset, SCREEN_SIZE[1]/2, 40 ,  stroke_size=10, color = col_blue)
-            draw_text("COEF: " + str(np.round(SBD_coef, 2)), (50, 300), color=col_black)
-            draw_text("SBD : " + str(np.round(SBD)), (50, 400), color=col_black)
-            draw_text("HPOS: " + str(np.round(H_pos)), (50, 500), color=col_black)
-            draw_text("XOFF: " + str(H_offset), (50, 600), color=col_black)
+            
+            #draw_circ(H_pos + H_offset, SCREEN_SIZE[1]/2, 40 ,  stroke_size=10, color = col_blue)
+            draw_rect(H_pos + H_offset - 2, 0, 4, SCREEN_HEIGHT, stroke_size=10, color = col_blue)
+            draw_text("COEF: " + str(np.round(SBD_coef, 2)), (500, 50), color=col_black)
+            draw_text("SBD : " + str(np.round(SBD)), (500, 150), color=col_black)
+            draw_text("HPOS: " + str(np.round(H_pos)), (500, 250), color=col_black)
+            draw_text("XOFF: " + str(H_offset), (500, 300), color=col_black)
         
         if STATE == "Saved":
             msg = "SBG.csv saved. Backspace for back.  Space for new cycle"
-        
+                            
         # Fixed UI elements
         draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .9), color=col_black)
-        SCREEN.blit(Img,(50,50))
-                    
+
         # update the screen to display the changes you made
         pg.display.update()
 
@@ -256,6 +265,11 @@ def draw_circ(x, y, radius,
               stroke_size = 1):
     pg.draw.circle(SCREEN, color, (x,y), radius, stroke_size)
 
+def draw_rect(x, y, 
+              width, height, 
+              color = (255,255,255), 
+              stroke_size = 1):
+    pg.draw.rect(SCREEN, color, (x, y, width, height), stroke_size)
 
 def write_csv(coef):
     pass
