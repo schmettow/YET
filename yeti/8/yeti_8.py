@@ -29,20 +29,12 @@ from pygame.compat import unichr_, unicode_
 ##### DEFINITIONS ####
 
 ## width and height in pixel
-SCREEN_SIZE = (2000, 500)
+SCREEN_SIZE = (1400, 500)
 SCREEN_WIDTH = SCREEN_SIZE[0]
 SCREEN_HEIGHT = SCREEN_SIZE[1]
 HPOS  = (40, SCREEN_WIDTH - 40) ## x points for measuring
 
 ##### Preparations #####
-
-# Connecting to YET
-
-log.basicConfig(filename='YET.log',level=log.INFO)
-YET = cv2.VideoCapture(1)
-if not YET.isOpened():
-        print('Unable to load camera.')
-        exit()
 
 # Reading the CV model for eye detection
 eyeCascade = cv2.CascadeClassifier("./trained_models/haarcascade_eye.xml")
@@ -56,7 +48,6 @@ col_green = (0, 255, 0)
 col_blue = (0, 0, 255)
 col_yellow = (250, 250, 0)
 col_white = (255, 255, 255)
-
 col_red_dim = (120, 0, 0)
 col_green_dim = (0, 60, 0)
 col_yellow_dim = (120,120,0)
@@ -67,18 +58,33 @@ pg.init()
 pg.display.set_mode(SCREEN_SIZE)
 pg.display.set_caption(TITLE)
 
-FONT = pg.font.Font('freesansbold.ttf',40)
+Font = pg.font.Font('freesansbold.ttf',30)
+Font_small = pg.font.Font('freesansbold.ttf',15)
 SCREEN = pg.display.get_surface()
-font = pg.font.Font(None, 15)
-
 
 def main():    
-    ## Initial State
+    Yetstream = False
+    ## Initial interaction State
     STATE = "Detect" #  Measure_L, Measure_R, Follow, Save
-    Detected = False
-    Eyes = []
-    SBD = 0
-    H_offset = 0
+    Detected = False # eye detection
+    Eyes = [] # results of eye detection
+    SBD = 0 # split frame difference
+    H_offset = 0 # manual horizontal offset
+
+    # Connecting to YET
+    YET = cv2.VideoCapture(1)
+    if YET.isOpened():
+        Yetstream = True
+        width = int(YET.get(cv2.CAP_PROP_FRAME_WIDTH ))
+        height = int(YET.get(cv2.CAP_PROP_FRAME_HEIGHT ))
+        fps =  YET.get(cv2.CAP_PROP_FPS)
+        dim = (width, height)
+        print('YET stream' + str(dim) + "@" + str(fps))
+    else:
+        print('Unable to load YET.')
+        exit()
+
+
 
     
     ## FAST LOOP
@@ -107,12 +113,14 @@ def main():
         # in all other states, we only extract teh eye frane and compute SBG_diff
         else:
             F_eye = F_gray[y:y+h,x:x+w]
-            SBD = calc_SBD(F_eye)
+            F_left, F_right = split_frame(F_eye)
+            SBD = calc_SBD(F_left, F_right)
 
         ## Event handling
         for event in pg.event.get():
             if event.type == KEYDOWN:
                 # Interactive transition conditionals (ITC)
+                ## Five consecutive steps with back-and-forth navigation
                 if STATE == "Detect":
                     if event.key == K_SPACE:
                         if Detected:
@@ -138,14 +146,14 @@ def main():
                     if event.key == K_DOWN:
                         H_offset = 0
                     if event.key == K_SPACE:
-                        write_csv(SBD_coef) # save coefficients 
+                        write_csv(SBD_model) # save coefficients 
                         STATE = "Save"
                     elif event.key == K_BACKSPACE:
                         STATE = "Measure_R"
                 elif STATE == "Save":
                     if event.key == K_BACKSPACE:
                         STATE = "Validate"
-                    elif event.key == K_SPACE:
+                    elif event.key == K_RETURN:
                         STATE = "Detect"   ## ring closed
                 print(STATE)
 
@@ -158,10 +166,10 @@ def main():
 
         # Automatic transitionals
         if STATE == "Train":
-            SBD_coef = train_SBD((SBD_L, SBD_R), HPOS) # fitting the model
-            print("Model:" + str(SBD_L) + str(SBD_R) + str(SBD_coef))
+            SBD_model = train_SBD((SBD_L, SBD_R), HPOS) # fitting the model
+            print("SBD: " + str((SBD_L, SBD_R)) + "Model: " + str(SBD_model))
             STATE = "Validate"
-            print
+            print(STATE)
 
         # Presentitionals
         BACKGR_COL = col_white
@@ -176,8 +184,10 @@ def main():
         SCREEN.blit(Img,((SCREEN_WIDTH - 400)/2, (SCREEN_HEIGHT - 400)/2))
         
         if STATE == "Detect":
-            BACKGR_COL = col_red_dim
-            msg = "When eye is detected, press Space"
+            if Detected:
+                msg = "Press Space"
+            else:
+                msg = "Eye not detected"
 
         if STATE == "Measure_L":
             msg = "Focus on the circle to your Left and press Space.  Backspace for back."
@@ -189,17 +199,18 @@ def main():
 
         if STATE == "Validate":
             msg = "Press Space for saving.  Backspace for back."
-            H_pos = predict_HPOS(SBD, SBD_coef)
+            H_pos = predict_HPOS(SBD, SBD_model)
             
-            #draw_circ(H_pos + H_offset, SCREEN_SIZE[1]/2, 40 ,  stroke_size=10, color = col_blue)
+            # blue vertical bar
             draw_rect(H_pos + H_offset - 2, 0, 4, SCREEN_HEIGHT, stroke_size=10, color = col_blue)
-            draw_text("COEF: " + str(np.round(SBD_coef, 2)), (500, 50), color=col_black)
-            draw_text("SBD : " + str(np.round(SBD)), (500, 150), color=col_black)
-            draw_text("HPOS: " + str(np.round(H_pos)), (500, 250), color=col_black)
-            draw_text("XOFF: " + str(H_offset), (500, 300), color=col_black)
+            # diagnostics
+            draw_text("COEF: " + str(np.round(SBD_model, 2)), (510, 50), color=col_green)
+            draw_text("SBD : " + str(np.round(SBD)), (510, 150), color=col_green)
+            draw_text("HPOS: " + str(np.round(H_pos)), (510, 250), color=col_green)
+            draw_text("XOFF: " + str(H_offset), (510, 300), color=col_green)
         
         if STATE == "Saved":
-            msg = "SBG.csv saved. Backspace for back.  Space for new cycle"
+            msg = "SBG.csv saved. Backspace for back. Return for new cycle."
                             
         # Fixed UI elements
         draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .9), color=col_black)
@@ -216,10 +227,9 @@ def split_frame(Frame):
     return F_left, F_right
 
 # Computes the split-frame brightness diff
-def calc_SBD(Frame):
-    F_left, F_right = split_frame(Frame)
-    bright_left = np.mean(F_left)
-    bright_right = np.mean(F_right)
+def calc_SBD(frame_1, frame_2):
+    bright_left = np.mean(frame_1)
+    bright_right = np.mean(frame_2)
     sbd = bright_right - bright_left
     return sbd
 
@@ -247,9 +257,10 @@ def frame_to_surf(frame, dim):
 
 def draw_text(text, dim,
               color = (255, 255, 255),
-              center = False):
+              center = False,
+              font = Font):
     x, y = dim
-    rendered_text = FONT.render(text, True, color)
+    rendered_text = font.render(text, True, color)
     # retrieving the abstract rectangle of the text box
     box = rendered_text.get_rect()
     # this sets the x and why coordinates
