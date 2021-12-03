@@ -2,7 +2,7 @@
 
 # Experiments with Yeti2 showed, that teh split-frame brighness gradient
 # is linearly related to horizontal eye ball position.
-# This Yeti shows a quick calibration based on only two points
+# This Yeti shows a quick calibration based on only two points.
 
 YETI = 8
 YETI_NAME = "Yeti" + str(YETI)
@@ -12,6 +12,7 @@ AUTHOR = "M Schmettow"
 DEBUG = False
 
 import sys
+import os.path
 import logging as log
 import datetime as dt
 from time import time
@@ -37,7 +38,11 @@ HPOS  = (40, SCREEN_WIDTH - 40) ## x points for measuring
 ##### Preparations #####
 
 # Reading the CV model for eye detection
-eyeCascade = cv2.CascadeClassifier("./trained_models/haarcascade_eye.xml")
+eyeCascadeFile = "../trained_models/haarcascade_eye.xml"
+if os.path.isfile(eyeCascadeFile):
+    eyeCascade = cv2.CascadeClassifier(eyeCascadeFile)
+else:
+    sys.exit(eyeCascadeFile + ' not found. CWD: ' + os.getcwd())
 
 # PG
 # color definitions
@@ -171,10 +176,10 @@ def main():
             STATE = "Validate"
             print(STATE)
 
+        
         # Presentitionals
         BACKGR_COL = col_white
         SCREEN.fill(BACKGR_COL)
-        
         
         # YET stream
         if Detected:
