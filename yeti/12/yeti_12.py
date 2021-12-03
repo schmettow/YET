@@ -9,6 +9,7 @@ TITLE = "Multiple point callibration with keras"
 AUTHOR = "NM BIERHUIZEN"
 
 import sys
+import os.path
 import logging as log
 import datetime as dt
 from time import time
@@ -50,7 +51,13 @@ if YET.isOpened():
 else:
     print('Unable to load camera.')
     exit()
-eyeCascade = cv2.CascadeClassifier("haarcascade_eye.xml")
+
+# Reading the CV model for eye detection
+eyeCascadeFile = "../trained_models/haarcascade_eye.xml"
+if os.path.isfile(eyeCascadeFile):
+    eyeCascade = cv2.CascadeClassifier(eyeCascadeFile)
+else:
+    sys.exit(eyeCascadeFile + ' not found. CWD: ' + os.getcwd())
 
 # PG
 

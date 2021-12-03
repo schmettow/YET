@@ -53,16 +53,22 @@ pos_R = (XPOS[1], SCREEN_HEIGHT/2)
 
 ##### Preparations #####
 
-# Connecting to YET
+# Reading the CV model for eye detection
+eyeCascadeFile = "../trained_models/haarcascade_eye.xml"
+if os.path.isfile(eyeCascadeFile):
+    eyeCascade = cv2.CascadeClassifier(eyeCascadeFile)
+else:
+    sys.exit(eyeCascadeFile + ' not found. CWD: ' + os.getcwd())
 
+
+# Connecting to YET
 log.basicConfig(filename='YET.log',level=log.INFO)
 YET = cv2.VideoCapture(1)
 if not YET.isOpened():
         print('Unable to load camera.')
         exit()
 
-# Reading the CV model for eye detection
-eyeCascade = cv2.CascadeClassifier("haarcascade_eye.xml")
+
 
 # PG
 # color definitions
