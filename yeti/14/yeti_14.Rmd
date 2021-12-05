@@ -1,0 +1,98 @@
+---
+title: "Yeti 14"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+
+# Preparing targets
+
+```{r}
+(levels <- 50 + 0:9 * 100)
+(levels <- 50 + 0:4 * 230)
+(levels <- 50 + 0:2 * 450)
+
+expand.grid(x = levels, y = levels) %>% 
+  openxlsx::write.xlsx("yeti_14.xlsx")
+```
+
+
+
+
+```{r}
+Y_14 <- 
+  read_excel("yeti_14_1638657892.9584942.xlsx")
+```
+
+
+# Model Exploration
+
+```{r}
+Y_14 %>% 
+  pivot_longer(NW:SE, names_to = "Quad", values_to = "bright") %>% 
+  ggplot(aes(x = bright, col = Quad)) +
+    geom_smooth(aes(y = x, linetype = "Horizontal"), se = F) +
+    geom_smooth(aes(y = y, linetype = "Vertical"), se = F)
+```
+
+```{r}
+M_x_0 <- lm(x ~ NW + NE + SW + SE, data = Y_14)
+M_x_1 <- lm(x ~ (NW + NE + SW + SE)^2, data = Y_14)
+M_x_2 <- lm(x ~ (NW + NE + SW + SE)^3, data = Y_14)
+M_x_3 <- lm(x ~ (NW + NE + SW + SE)^4, data = Y_14)
+
+M_y_0 <- lm(y ~ NW + NE + SW + SE, data = Y_14)
+M_y_1 <- lm(y ~ (NW + NE + SW + SE)^2, data = Y_14)
+M_y_2 <- lm(y ~ (NW + NE + SW + SE)^3, data = Y_14)
+M_y_3 <- lm(y ~ (NW + NE + SW + SE)^4, data = Y_14)
+
+```
+
+```{r}
+AIC(M_x_0, M_x_1, M_x_2, M_x_3) %>% 
+  arrange(AIC)
+
+AIC(M_y_0, M_y_1, M_y_2, M_y_3) %>% 
+  arrange(AIC)
+
+Y_14 <- Y_14 %>% 
+  mutate(x_0 = predict(M_x_0),
+         y_0 = predict(M_y_0),
+         x_3 = predict(M_x_3),
+         y_3 = predict(M_y_3),
+         sqe_x_0 = (x - x_0)^2,
+         sqe_y_0 = (y - y_0)^2,
+         sqe_x_3 = (x - x_3)^2,
+         sqe_y_3 = (y - y_3)^2)
+
+```
+
+
+```{r}
+RMSE_14 <-
+  Y_14 %>% 
+  group_by(x, y) %>% 
+  summarize(RMSE_x_0 = sqrt(mean(sqe_x_0)),
+            RMSE_y_0 = sqrt(mean(sqe_y_0)),
+            RMSE_x_3 = sqrt(mean(sqe_x_3)),
+            RMSE_y_3 = sqrt(mean(sqe_y_3)))
+
+RMSE_14 %>% 
+  ggplot(aes(x = x , y = y)) +
+    geom_point(aes(size = RMSE_x_0, col = "M_0"), alpha = .5) +
+    geom_point(aes(size = RMSE_x_3, col = "M_3"), alpha = .5) +
+    labs(size = "RMSE", col = "Model", main = "Horizontal RMSE")
+
+RMSE_14 %>% 
+  ggplot(aes(x = x , y = y)) +
+    geom_point(aes(size = RMSE_y_0, col = "M_0"), alpha = .5) +
+    geom_point(aes(size = RMSE_y_3, col = "M_3"), alpha = .5) +
+    labs(size = "RMSE", col = "Model", main = "Vertical RMSE")
+```
+
