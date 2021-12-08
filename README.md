@@ -1,4 +1,4 @@
-# YET - The YOUR EYE TRACKER project
+# YET is your Eye Tracker
 
 ![YET Logo](https://github.com/schmettow/YET/raw/main/docs/logo/YET%20Logo%20small.PNG)
 
