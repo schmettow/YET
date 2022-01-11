@@ -36,11 +36,11 @@ from pygame.locals import *
 ##### DEFINITIONS ####
 ## width and height in pixel
 
-SCREEN_SIZE = (1400, 500)
-SCREEN_WIDTH = SCREEN_SIZE[0]
-SCREEN_HEIGHT = SCREEN_SIZE[1]
-HPOS = (40, SCREEN_WIDTH - 40)   # x points for measuring
-VPOS = (40, SCREEN_HEIGHT - 40)  # y pointes for measuring
+SCREEN_SIZE = (1200, 800)
+SW = SCREEN_SIZE[0]
+SH = SCREEN_SIZE[1]
+HPOS = (40, SW - 40)   # x points for measuring
+VPOS = (40, SH - 40)  # y pointes for measuring
 
 ##### Preparations #####
 # Reading the CV model for eye detection
@@ -66,7 +66,7 @@ col_red_dim = (120, 0, 0)
 col_green_dim = (0, 60, 0)
 col_yellow_dim = (120, 120, 0)
 col_gray = (220, 220, 220)
-col_gray_alpha = (220, 220, 220, alpha)
+col_gray_alpha = (20, 20, 20, alpha)
 col_orange = (250, 140, 0)
 col_orange_alpha = (250, 140, 0, 128)
 
@@ -104,8 +104,9 @@ BACKGR_COL = col_gray
 pg.init()
 pg.display.set_mode(SCREEN_SIZE)
 pg.display.set_caption(TITLE)
-Font = pg.font.Font('freesansbold.ttf', 30)
-Font_small = pg.font.Font('freesansbold.ttf', 15)
+FONT = pg.font.Font('freesansbold.ttf', int(SH/4))
+Font = pg.font.Font('freesansbold.ttf', int(SH/16))
+Font_small = pg.font.Font('freesansbold.ttf', int(SH/32))
 SCREEN = pg.display.get_surface()
 SCREEN_OVERLAY = pg.display.get_surface()
 
@@ -255,7 +256,7 @@ def main():
 
                     #############################################################
                     #17: to combine the stroop task with the eye tracker 
-                    elif event.key == K_RETURN:
+                    elif event.key == K_SPACE:
                         STATE = "Stroop_init"
 
                 elif STATE == "Stroop_init":
@@ -355,33 +356,33 @@ def main():
             do_not_draw_eye_frame_states = ["Validate", "Stroop_init", "Stroop_prep_trial", "Stroop_trial",
                                             "Stroop_feedback", "Stroop_goodbye", "Stroop_failed", "Stroop_save"]
             if STATE not in do_not_draw_eye_frame_states:
-                SCREEN.blit(Img, ((SCREEN_WIDTH - 400) / 2, (SCREEN_HEIGHT - 400) / 2))
+                SCREEN.blit(Img, ((SW - 400) / 2, (SH - 400) / 2))
 
         if STATE == "welcome":  # PROJECT: add the text for the welcome screen
             msg = "Press spacebar to continue"
-            draw_text("Welcome to the eye-tracking experiment of group 17", (340, 250), color=col_white)
+            draw_text("STROOP/YET", (100, SH/5), col_white)
 
         if STATE == "Detect":
             if Detected:
                 msg = "Please Press Space"
-            else:
+            else: 
                 msg = "Eye not detected"
 
         if STATE == "Measure_L":  # Plot left circle
             msg = "Focus on the circle to your left and press Space.  Backspace for back."
-            draw_circ(HPOS[0], SCREEN_HEIGHT / 2, 20, stroke_size=10, color=col_red)
+            draw_circ(HPOS[0], SH / 2, 30, stroke_size=10, color=col_red)
 
         if STATE == "Measure_R":  # plot right circle
             msg = "Focus on the circle to your right and press Space. Backspace for back."
-            draw_circ(HPOS[1], SCREEN_HEIGHT / 2, 20, color=col_red, stroke_size=10)
+            draw_circ(HPOS[1], SH / 2, 30, color=col_red, stroke_size=10)
 
         if STATE == "Measure_T":  # plot top circle
             msg = "Focus on the circle at the top and press Space.  Backspace for back."
-            draw_circ(700, 25, 20, stroke_size=10, color=col_red)
+            draw_circ(SW / 2, VPOS[0], 30, stroke_size=10, color=col_red)
 
         if STATE == "Measure_B":  # plot bottom circle
             msg = "Focus on the circle at the bottom and press Space. Backspace for back."
-            draw_circ(700, 475, 20, color=col_red, stroke_size=10)
+            draw_circ(SW / 2, VPOS[1],  30, color=col_red, stroke_size=10)
 
         if STATE == "Validate":
             msg = "Press Space for saving.  Backspace for back.  Enter for stroop test."
@@ -401,7 +402,7 @@ def main():
             draw_text("YOFF: " + str(V_offset), (510, 400), color=col_green)  # add text for yoff
 
         if "Stroop" in STATE:
-            BACKGR_COL = col_gray
+            BACKGR_COL = col_black
             SCREEN.fill(BACKGR_COL)
 
         if STATE == "Stroop_init":
@@ -451,18 +452,16 @@ def main():
             msg = f"{RESULTS} saved. Backspace for back. Return for new cycle."
 
         # Fixed UI elements
-        draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .9), color=col_white)
+        draw_text(msg, (SH * .1, SW * .9), color=col_white)
 
         # update the screen to display the changes you made
         pg.display.update()
 
 
 def draw_lines(H_POS, H_offset, V_POS, V_offset): #17: made a function of this cross to make sure that the boxes can be used in the Stroop task as well
-    draw_rect(H_POS + H_offset - 2, 0, 4, SCREEN_HEIGHT, stroke_size=1, color=col_blue)  # plot blue horizontal line
-    draw_rect(0, V_POS + V_offset - 2, SCREEN_WIDTH, 4, stroke_size=1, color=col_blue)  # Plot blue vertical line
+    draw_rect(H_POS + H_offset - 2, 0, 4, SH, stroke_size=3, color=col_blue)  # plot blue horizontal line
+    draw_rect(0, V_POS + V_offset - 2, SW, 4, stroke_size=3, color=col_blue)  # Plot blue vertical line
 
-
-# splits a frame horizontally
 def draw_welcome():  # PROJECT: add this so the computer has visuals for the welcome screen
     text_surface = Font.render("welcome", True, col_gray, col_gray)
     text_rectangle = text_surface.get_rect()
@@ -471,7 +470,7 @@ def draw_welcome():  # PROJECT: add this so the computer has visuals for the wel
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 300)
 
-
+# splits a frame horizontally
 def split_frame(Frame):
     height, width = Frame.shape
     F_left = Frame[0:height, 0:int(width / 2)]
@@ -561,14 +560,14 @@ def pick_color():
     random_number = random.randint(0, 2)
     return WORDS[random_number]
 
+ZONES = ((0,0, int(SW/5), int(SH)), (int(SW/5)+1, 0, ), ())
 
-# Added
 def draw_detection_zones_and_buttons():
-    stroke = 2 #17: thickness of the line
-    width = SCREEN_WIDTH / 3
-    height = SCREEN_HEIGHT / 3
+    stroke = 5 #17: thickness of the line
+    width = SW / 3
+    height = SH / 3
 
-    r1 = Rect(0, height * 2, width, height)  # height times 2 is two-third of the screen down
+    r1 = Rect( 0, height * 2, width, height)  # height times 2 is two-third of the screen down
     c1 = r1.center  # (x, y) so c1[0] = x, c1[1] = y
     draw_rect_by_tuple(r1, col_black, stroke_size=stroke)
 
@@ -580,9 +579,9 @@ def draw_detection_zones_and_buttons():
     c3 = r3.center  # (x, y) so c3[0] = x, c3[1] = y
     draw_rect_by_tuple(r3, col_black, stroke_size=stroke)
 
-    draw_button(c1[0], c1[1], "Red", col_black) #17: use variables from lines above to draw the button in the middle of the answer box
-    draw_button(c2[0], c2[1], "Green", col_black)
-    draw_button(c3[0], c3[1], "Blue", col_black)
+    draw_button(c1[0], c1[1], "R", col_white) #17: use variables from lines above to draw the button in the middle of the answer box
+    draw_button(c2[0], c2[1], "G", col_white)
+    draw_button(c3[0], c3[1], "B", col_white)
 
     return r1, r2, r3
 
@@ -648,30 +647,30 @@ def check_answer_within_acceptable_timeframe(time_when_presented):
 
 
 def draw_button(xpos, ypos, label, color):
-    text = font_small.render(label, True, color, BACKGR_COL)
+    text = FONT.render(label, True, col_white, col_black)
     text_rectangle = text.get_rect()
     text_rectangle.center = (xpos, ypos)
     SCREEN.blit(text, text_rectangle)
 
 
 def draw_stroop_welcome():
-    text_surface = font.render("STROOP Experiment", True, col_black, BACKGR_COL)
+    text_surface = font.render("STROOP Experiment", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 150)
     SCREEN.blit(text_surface, text_rectangle)
-    text_surface = font_small.render("Press Spacebar to continue", True, col_black, BACKGR_COL)
+    text_surface = font_small.render("Press Spacebar to continue", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 300)
     SCREEN.blit(text_surface, text_rectangle)
     text_surface = font_small.render("If you want to restart the test at any moment use the Backspace key", True,
-                                     col_black, BACKGR_COL)
+                                     col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 350)
     SCREEN.blit(text_surface, text_rectangle)
 
 
 def draw_stimulus(color, word):
-    text_surface = font.render(word, True, COLORS[color], col_gray)
+    text_surface = FONT.render(word, True, COLORS[color], col_black)
     text_rectangle = text_surface.get_rect()
     # text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 100)
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, SCREEN_SIZE[1] / 3.0)
@@ -679,12 +678,12 @@ def draw_stimulus(color, word):
 
 
 def draw_failed():
-    text_surface = font_small.render(f"Failed to respond within {fail_timer} seconds!", True, col_black, BACKGR_COL)
+    text_surface = font_small.render(f"Failed to respond within {fail_timer} seconds!", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 150)
     SCREEN.blit(text_surface, text_rectangle)
 
-    text_surface = font_small.render("Press Spacebar to continue", True, col_black, BACKGR_COL)
+    text_surface = font_small.render("Press Spacebar to continue", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 300)
     SCREEN.blit(text_surface, text_rectangle)
@@ -692,40 +691,40 @@ def draw_failed():
 
 def draw_feedback(correct, reaction_time):
     if correct:
-        text_surface = font_small.render("correct", True, col_black, BACKGR_COL)
+        text_surface = font_small.render("correct", True, col_white, col_black)
         text_rectangle = text_surface.get_rect()
         text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 150)
         SCREEN.blit(text_surface, text_rectangle)
-        text_surface = font_small.render(str(int(reaction_time * 1000)) + "ms", True, col_black, BACKGR_COL)
+        text_surface = font_small.render(str(int(reaction_time * 1000)) + "ms", True, col_white, col_black)
         text_rectangle = text_surface.get_rect()
         text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 200)
         SCREEN.blit(text_surface, text_rectangle)
     else:
-        text_surface = font_small.render("Wrong key!", True, col_red, BACKGR_COL)
+        text_surface = font_small.render("Wrong key!", True, col_red, col_white)
         text_rectangle = text_surface.get_rect()
         text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 150)
         SCREEN.blit(text_surface, text_rectangle)
 
-    text_surface = font_small.render("Press Spacebar to continue", True, col_black, BACKGR_COL)
+    text_surface = font_small.render("Press Spacebar to continue", col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 300)
     SCREEN.blit(text_surface, text_rectangle)
 
 
 def draw_goodbye():
-    text_surface = font_small.render("END OF THE EXPERIMENT", True, col_black, BACKGR_COL)
+    text_surface = font_small.render("END OF THE EXPERIMENT", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 150)
     SCREEN.blit(text_surface, text_rectangle)
-    text_surface = font_small.render("Close the application.", True, col_black, BACKGR_COL)
+    text_surface = font_small.render("Close the application.", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 200)
     SCREEN.blit(text_surface, text_rectangle)
-    text_surface = font_small.render("Press 's' to save results to file", True, col_black, BACKGR_COL)
+    text_surface = font_small.render("Press 's' to save results to file", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 250)
     SCREEN.blit(text_surface, text_rectangle)
-    text_surface = font_small.render("Press backspace to restart stroop test", True, col_black, BACKGR_COL)
+    text_surface = font_small.render("Press backspace to restart stroop test", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
     text_rectangle.center = (SCREEN_SIZE[0] / 2.0, 300)
     SCREEN.blit(text_surface, text_rectangle)
