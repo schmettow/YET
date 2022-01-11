@@ -10,7 +10,7 @@ TITLE = "Stroop task"
 AUTHOR = "M SCHMETTOW, GOF17 (2021)"
 #CONFIG = ""
 EYECASC = "../../trained_models/haarcascade_eye.xml"
-RESULTS = "14/yeti_14_" + str(time()) + ".csv"
+RESULTS = "yeta2_" + str(time()) + ".csv"
 DEBUG = True #17: can be changed to false for the experiment
 MOUSE = True  #17: Changed to false because we now use the eyes instead of the mouse
 USB_YET = 1
@@ -80,7 +80,7 @@ accepted_hit_timer = .1 #17: the number of seconds in which looking at the answe
 fail_timer = 3 #17: same as above but for not answering
 
 #Make a filename, a csv header and list to store results in
-details = ["Participant", "Trail_nr", "Correct", "Reaction time"] #17: colomn names (dont change the order)
+details = ["Participant", "Trail_nr", "Word", "Color", "Correct", "Reaction time"] #17: colomn names (dont change the order)
 results = []
 
 # Experiment
@@ -282,7 +282,7 @@ def main():
                         this_correctness = (event.key == KEYS[this_color])
 
                         # Append result to results list
-                        results.append([participant, trial_number, this_correctness, this_reaction_time])
+                        results.append([participant, trial_number, this_word, this_color, this_correctness, this_reaction_time])
                         if DEBUG:
                             print(f"DEBUG results: {results}")
                         STATE = "Stroop_feedback"
@@ -337,6 +337,16 @@ def main():
             print("SBD_V: " + str((SBD_T, SBD_B)) + "Model: " + str(SBD_model_V))  # printing model SBD_MODEL V
             STATE = "Validate"
             print(STATE)
+        
+        if STATE == "Stroop_prep_trial":
+            # New trail so reset the previously saved timing(detection) values
+            reset_saved_hit_values(reset_no_matter_what=True)
+            trial_number += 1
+            this_word = pick_color()
+            this_color = pick_color()
+            time_when_presented = time()
+            STATE = "Stroop_trial"
+
 
         # Presentitionals
         BACKGR_COL = col_black
@@ -386,8 +396,8 @@ def main():
 
         if STATE == "Validate":
             msg = "Press Space for saving.  Backspace for back.  Enter for stroop test."
-            H_POS = predict_HPOS(SBD_H, SBD_model_H)  # predict HPOS
-            V_POS = predict_VPOS(SBD_V, SBD_model_V)  # predict VPOS
+            H_POS = predict_HPOS(SBD_H, SBD_model_H, limits = (0, SW))  # predict HPOS
+            V_POS = predict_VPOS(SBD_V, SBD_model_V, limits = (0, SH))  # predict VPOS
 
             draw_lines(H_POS, H_offset, V_POS, V_offset)
 
@@ -401,30 +411,20 @@ def main():
             draw_text("XOFF: " + str(H_offset), (510, 350), color=col_green)  # add text for xoff
             draw_text("YOFF: " + str(V_offset), (510, 400), color=col_green)  # add text for yoff
 
-        if "Stroop" in STATE:
-            BACKGR_COL = col_black
-            SCREEN.fill(BACKGR_COL)
+        # if "Stroop" in STATE:
+        #     BACKGR_COL = col_black
+        #     SCREEN.fill(BACKGR_COL)
 
         if STATE == "Stroop_init":
             msg = ""
             trial_number = 0  # Reset the trail_number to zero
             draw_stroop_welcome()
 
-        if STATE == "Stroop_prep_trial":
-            # New trail so reset the previously saved timing(detection) values
-            reset_saved_hit_values(reset_no_matter_what=True)
-
-            trial_number += 1
-            this_word = pick_color()
-            this_color = pick_color()
-            time_when_presented = time()
-            STATE = "Stroop_trial"
-
         if STATE == "Stroop_trial":
             #################################################################
             #17: this shows the blue lines during the stroop task
-            H_POS = predict_HPOS(SBD_H, SBD_model_H)  # predict HPOS
-            V_POS = predict_VPOS(SBD_V, SBD_model_V)  # predict VPOS
+            H_POS = predict_HPOS(SBD_H, SBD_model_H, limits = (0, SW))  # predict HPOS
+            V_POS = predict_VPOS(SBD_V, SBD_model_V, limits = (0, SW))  # predict VPOS
             draw_lines(H_POS, H_offset, V_POS, V_offset)
             draw_stimulus(this_color, this_word)
 
@@ -499,13 +499,19 @@ def train_SBD(SBD, X):  # note: no changes is needed
 
 # Predicts x position based on SBD and SBD coefficients
 
-def predict_HPOS(SBD_H, coef):  # def predict of hpos
+def predict_HPOS(SBD_H, coef, limits):  # def predict of hpos
+    hmin, hmax = limits
     H_POS = coef[0] + SBD_H * coef[1]
+    H_POS = max(hmin, H_POS)
+    H_POS = min(hmax, H_POS)
     return H_POS
 
 
-def predict_VPOS(SBD_V, coef):  # def predict of vpos
+def predict_VPOS(SBD_V, coef, limits):  # def predict of vpos
+    vmin, vmax = limits
     V_POS = coef[0] + SBD_V * coef[1]
+    V_POS = max(vmin, V_POS)
+    V_POS = min(vmax, V_POS)
     return V_POS
 
 
@@ -560,24 +566,30 @@ def pick_color():
     random_number = random.randint(0, 2)
     return WORDS[random_number]
 
-ZONES = ((0,0, int(SW/5), int(SH)), (int(SW/5)+1, 0, ), ())
+
+ZONES = \
+((0,0, int(SW/5), int(SH)),  
+(int(SW/5)+1, 3 * int(SH/5), 3 * int(SW/5), 2 * int(SH/5)), 
+(4 * int(SW/5)+1, 0, int(SW/5), SH))
+
 
 def draw_detection_zones_and_buttons():
     stroke = 5 #17: thickness of the line
     width = SW / 3
     height = SH / 3
 
-    r1 = Rect( 0, height * 2, width, height)  # height times 2 is two-third of the screen down
+    r1 = Rect(ZONES[0])  # 
     c1 = r1.center  # (x, y) so c1[0] = x, c1[1] = y
-    draw_rect_by_tuple(r1, col_black, stroke_size=stroke)
+    pg.draw.rect(SCREEN, col_gray, r1, 2)
+    #draw_rect_by_tuple(r1, col_gray, stroke_size=stroke)
 
-    r2 = Rect(width, height * 2, width, height)
+    r2 = Rect(ZONES[1])
     c2 = r2.center  # (x, y) so c2[0] = x, c2[1] = y
-    draw_rect_by_tuple(r2, col_black, stroke_size=stroke)
+    pg.draw.rect(SCREEN, col_gray, r2, 2)
 
-    r3 = Rect(width * 2, height * 2, width, height)
+    r3 = Rect(ZONES[2])
     c3 = r3.center  # (x, y) so c3[0] = x, c3[1] = y
-    draw_rect_by_tuple(r3, col_black, stroke_size=stroke)
+    pg.draw.rect(SCREEN, col_gray, r3, 2)
 
     draw_button(c1[0], c1[1], "R", col_white) #17: use variables from lines above to draw the button in the middle of the answer box
     draw_button(c2[0], c2[1], "G", col_white)
