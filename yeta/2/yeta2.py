@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 # Yeta2: Stroop experiment
 # Running the Stroop task with eye tracking
 
 from time import time
 
 YETA = 2
-YETI = 8
+YETI = 11
 YETI_NAME = "Yeta" + str(YETI)
 TITLE = "Stroop task"
 AUTHOR = "M SCHMETTOW, GOF17 (2021)"
@@ -15,20 +16,17 @@ DEBUG = True #17: can be changed to false for the experiment
 MOUSE = True  #17: Changed to false because we now use the eyes instead of the mouse
 USB_YET = 1
 
-
-# -*- coding: utf-8 -*-
+# basic
 import os
+import sys
+# CV processing
+import cv2 as cv
+# Data processing
+import numpy as np
 import csv
 import datetime
 import random
-import sys
-from time import time
-
-# CV
-import cv2 as cv
-# DS
-import numpy as np
-# PG
+# PyGame
 import pygame as pg
 from pygame.locals import *
 
