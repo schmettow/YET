@@ -5,7 +5,7 @@ date: "30/09/2021"
 output: html_document
 ---
 
-# The Your-eye-tracker (YET) project
+# YET is your eye-tracker (YET)
 
 YET is Your Eye Tracker. The goal of this project is to make eye trackers so cheap that everyone can own one. At the moment, the primary directive of YET is on developing skills in students of the Social Sciences. Skills such as:
 
