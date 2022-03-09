@@ -85,7 +85,7 @@ def main():
     CALIBRATIONPOINTS = np.multiply([[SCREEN_SIZE[1]], [SCREEN_SIZE[0]]], CALIBRATIONPERCENTAGE) # x and y positions
     CALIBRATIONPOINTS = np.round(CALIBRATIONPOINTS) # round the value to the nearest integer value
     CALIBRATIONPOINTS = CALIBRATIONPOINTS.astype(int) # make it an integer
-    print(CALIBRATIONPOINTS)
+    #print(CALIBRATIONPOINTS)
     
     targets = np.empty([1, 2]) # create an array of correct dimensions for the targets
     for i in range(len(CALIBRATIONPOINTS[1])):
@@ -94,7 +94,7 @@ def main():
         values_x = np.append(values_x, values_y, axis=1) # combine arrays
         targets = np.append(targets, values_x, axis=0) # put into the targets array
     targets = np.delete(targets, 0, axis=0)
-    print(targets)
+    #print(targets)
     
     n_targets = len(targets) # How many calibrationpoints are there
     active_target = 0
@@ -113,7 +113,6 @@ def main():
     picturetarget = np.concatenate(read_coef("Images/PictureInfo_10.csv", 1)).ravel() # Get the picture names
     picture_amount = len(picturetarget)
     picture_shown = 1
-    # picture_array = np.arange(0, picture_amount, 1, dtype=int)
     imagepath = "Images/" + picturetarget[0]
 
     ## FAST LOOP
@@ -230,18 +229,14 @@ def main():
             this_obs = this_id
             t2 = time.time()
             elapsed_time = t2 - t1 # elapsed time since STATE == "Image" started
-            n_picture = int(np.floor(elapsed_time / SLIDE_TIME)) # round the number down
-            if picture_shown == n_picture: # check for the amount of picture shown
-                picture_shown += 1
-                rnd = n_picture
-                imagepath = "Images/" + picturetarget[rnd-1] # image path for picture
-                write_coef(RESULTS, flatten([this_obs, this_pos, [picturetarget[rnd-1]]]), "Data") # write the data
-                STATE = "Quick"
-                
-            if picture_shown > picture_amount:
-                write_coef(RESULTS, flatten([this_obs, this_pos, [picturetarget[rnd-1]]]), "Data") # write the data
-                STATE = "Thank You"
- 
+            if elapsed_time > picture_time: #presented longer then defined: trial is over
+                if picture_shown < picture_amount: # check for the amount of picture shown
+                    picture_shown += 1
+                    imagepath = "Images/" + picturetarget[picture_shown-1] # image path for picture (where 0 is the first picture)
+                    STATE = "Quick"     
+                elif picture_shown > picture_amount: 
+                    STATE = "Thank You"
+            write_coef(RESULTS, flatten([this_obs, this_pos, picturetarget[picture_shown-1]]), "Data") # write the data (where 0 is the first picture)
                 
         if STATE == "Adjust":
             this_bright = quad_bright(F_eye)
