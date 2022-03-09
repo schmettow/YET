@@ -1,5 +1,5 @@
 ## YETI 14: Collecting 2-dim calibration data for quadrant SBG
-## input = calibration point table
+## input = images
 ## Results = table with target coordinates and quadrant brightness
 
 import time
@@ -110,7 +110,7 @@ def main():
     OBS = np.zeros(shape=(0, len(OBS_cols)))
     obs = 0
 
-    picturetarget = np.concatenate(read_coef("Images/PictureInfo_10.csv", 1)).ravel() # Get the picture names
+    picturetarget = np.concatenate(read_coef("Images/PictureInfo.csv", 1)).ravel() # Get the picture names
     picture_amount = len(picturetarget)
     picture_shown = 1
     imagepath = "Images/" + picturetarget[0]
@@ -168,7 +168,9 @@ def main():
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Timer"
                 elif event.type == KEYDOWN and event.key == K_BACKSPACE:
-                    STATE = "SAVE"
+                    STATE = "Target"
+                    active_target = 0  # reset
+                    run = run + 1
             elif STATE == "Save":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Train"
@@ -179,12 +181,13 @@ def main():
                     STATE = "Target"
                     active_target = 0  # reset
                     run = run + 1
-            elif STATE == "Image":
-                if event.type == KEYDOWN and event.key == K_SPACE:
-                    STATE = "Train"
-                elif event.type == KEYDOWN and event.key == K_c:
-                    STATE = "Quick"
+#           elif STATE == "Image":
+#               if event.type == KEYDOWN and event.key == K_SPACE:
+#                   STATE = "Train"
+#               elif event.type == KEYDOWN and event.key == K_c:
+#                   STATE = "Quick"
             elif STATE == "Quick":
+#                if event.type == KEYUP and event.key == K_c:
                 if event.type == KEYDOWN and event.key == K_c:
                     STATE = "Adjust"
 
@@ -234,8 +237,10 @@ def main():
                     picture_shown += 1
                     imagepath = "Images/" + picturetarget[picture_shown-1] # image path for picture (where 0 is the first picture)
                     STATE = "Quick"     
-                elif picture_shown > picture_amount: 
+                else:
+                    t3 = time.time()
                     STATE = "Thank You"
+                    #print(STATE)
             write_coef(RESULTS, flatten([this_obs, this_pos, picturetarget[picture_shown-1]]), "Data") # write the data (where 0 is the first picture)
                 
         if STATE == "Adjust":
@@ -249,7 +254,7 @@ def main():
             
         # Show thank you screen
         if STATE == "Thank You":
-            if time.time() > (t1 + (picture_amount + 1) * SLIDE_TIME):
+            if time.time() - t3 > 3: #after 3sec
                 YET.release()
                 pg.quit()
                 sys.exit()
@@ -281,7 +286,7 @@ def main():
         elif STATE == "Validate":
             msg = "Press Space to continue the experiment."
             draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .75), color=col_green)
-            msg = "Backspace for back."
+            msg = "Press Backspace to redo the calibration and reset the experiment."
             draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .8), color=col_green)
             draw_rect(this_pos[0] + H_offset - 1, 0, 2, SCREEN_H, stroke_size=1, color=col_green)
             draw_rect(0, this_pos[1] + V_offset - 1, SCREEN_W, 2, stroke_size=1, color=col_green)
@@ -408,7 +413,7 @@ def draw_thank_you():
     SCREEN.blit(text_surface, text_rectangle)
     text_surface = FONT.render("For participation", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
-    text_rectangle.center = (SCREEN_SIZE[0] * 0.5, SCREEN_SIZE[1] * 0.7)
+    text_rectangle.center = (SCREEN_SIZE[0] * 0.5, SCREEN_SIZE[1] * 0.5)
     SCREEN.blit(text_surface, text_rectangle)
 
 
