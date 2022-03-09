@@ -5,7 +5,7 @@ date: "30/09/2021"
 output: html_document
 ---
 
-# The Your-eye-tracker (YET) project
+# YET is your eye-tracker (YET)
 
 YET is Your Eye Tracker. The goal of this project is to make eye trackers so cheap that everyone can own one. At the moment, the primary directive of YET is on developing skills in students of the Social Sciences. Skills such as:
 
@@ -33,28 +33,32 @@ YET is Your Eye Tracker. The goal of this project is to make eye trackers so che
 
 ## Yet
 
-The hardware of most (not all) eye trackers is essentially a a camera pointed towards the eyeball. The first idea of YET is that *every camera pointed to the eyeball can be an eye tracker.* Today, that creates a myriad of possibilities. 
+The hardware of most (not all) eye trackers is essentially a camera pointed towards the eyeball. Our first premise is that *every camera pointed to the eyeball can be an eye tracker.* Today, that creates a myriad of possibilities. 
 
-A device that points a camera to the eye, for example by means of a head mount, is called a *Yet*. The first Yets will be based on household materials and a few 3D printed parts, but more advanced head mounts are possible. The first designs in YET emphasize the values of simplicity and affordability. We use a USB endoscope camera with 5.5mm or 7mm diameter, which you can buy for under 10 EUR "on the internet". Connected to a computer (or smartphone), this camera can be accessed just like a regular webcam, which makes it easy to work with in a number of ways.
+A device that points a camera to the eye, for example by means of a head mount, is called a *Yet*. The first Yets are based on household materials and a few 3D printed parts, but more advanced head mounts are possible. The first and most recent is Yet0, which emphasize the values of simplicity and affordability. Yet0 uses a cheap USB endoscope camera, which you can buy for under 10 EUR "on the internet". Connected to a computer (or smartphone), this camera can be accessed just like a regular webcam, which makes it easy to work with in a number of ways.
 
 Yets are numbered and the first is *Yet0*. For making Yet0, you need:
 
 1.  a 5.5mm USB endoscope camera
 2.  a 30cm transparent plastic ruler
 3.  glue
-4.  a tiny 3D printed part, called *Clip-Y*
+4.  a tiny 3D printed part
+
 
 ## Yeti
 
-The second idea of YET is that *an eye tracking device consists of before-mentioned camera, plus a software mechanism that translates a Yet stream into eye ball coordinates.* Typically this mechanism is a software that uses Computer Vision procedures for the analysis of the Yet stream. A *Yet interface (Yeti)* is a software that processes the *Yet stream* of frames in a useful or interesting way. Usually, Yetis are self-written single-purpose programs in Python, using the libraries OpenCV for stream processing and Pygame for the user interface. But, more advanced or multi-purpose interfaces are possible.
+The second premise of YET is that an eye tracking device consists of before-mentioned camera, plus *a software mechanism that translates a Yet stream into eye ball coordinates.* Typically this mechanism is a software that uses Computer Vision procedures for the analysis of the Yet stream. 
+A *Yet interface (Yeti)* is a software that processes the *Yet stream* into eyeball coordinates (or any other useful outcome). 
+Usually, Yetis are small single-purpose programs in Python, using the libraries OpenCV for stream processing and Pygame for the user interface. But, more advanced or multi-purpose interfaces are possible, as are other programming languages.
 
-Yetis are numbered and distributed on Github ([schmettow/YET](https://github.com/schmettow/YET/tree/main/yeti)) The first is Yeti0, which does nothing more than capturing the Yet stream and displaying it. It is not interactive and therefore is build using OpenCV, only (w/o Pygame). The first interactive Yeti, using Pygame is Yeti2, which introduces a very simple, but effective, tracking algorithm (split-frame brightness gradient, SBG), as well as a common structure for Yetis.
+Yetis are numbered and distributed on Github ([schmettow/YET](https://github.com/schmettow/YET/tree/main/yeti)) The first is Yeti0, which does nothing more than capturing the Yet stream and displaying it. It is not interactive and therefore is build using OpenCV, only (w/o Pygame). 
+The most recent Yeti for eye tracking is Yeti14, which uses nine-point calibration points and a basic statistical learning.
 
-The programming techniques for development of Yetis will be introduced in the following online book: [Programming for Psychologists](https://schmettow.github.io/PfP_Book/).
+The programming techniques for development of Yetis are partly introduced in the following online book: [Programming for Psychologists](https://schmettow.github.io/PfP_Book/).
 
 ## Yeta
 
-The third idea of YET is that replacing a few expensive eye trackers with *an armada of cheap ones, can be transformative for research*. In the future, we expect to be able to build *Yet appliances (Yeta)*, such as mobile recording devices, novel user interfaces or assistive technologies.
+The third premise of YET is that replacing a few expensive eye trackers with an armada of Yets will be transformative for education and possibly also for research. Making eye tracking affordable for the masses will produce a myriad of 
 
 ## Definitions
 
@@ -86,21 +90,22 @@ The strength of Yet0 are its very low price. Clip-Y is a very simple shape that
 
 # Yeti catalogue
 
-## Yeti2
-
-[Yeti2](https://github.com/schmettow/YET/tree/main/yeti/2) is a demonstration of brightness gradient estimation for eye tracking.
-
--   CV-only
--   frame processing: split-frame, brightness average
--   needs calibration by setting variables
--   
-
 ## Yeti3
 
-[Yeti3](https://github.com/schmettow/YET/tree/main/yeti/3) collects SBG values at random horizontal eye positions.
+[Yeti3](https://github.com/schmettow/YET/tree/main/yeti/3) collects split-frame brightness (SFB) at random horizontal eye positions.
 It produces a data set with x_pos|SBG_left|SBG_right, which can be used as training data for a model that predicts 
 horizontal position by SBG. An R Markdown script is provided that loads the data set and helps identifying the most 
 accurate prediction model.
+
+## Yeti11
+
+[Yeti11](https://github.com/schmettow/YET/tree/main/yeti/11) is the first complete interface for horizontal and vertical tracking. It uses only four calibration point and some basic arithmetics. The results are usually robust as long as movements are orthogonal, but poor on the diagonals.
+
+## Yeti14
+
+[Yeti14](https://github.com/schmettow/YET/tree/main/yeti/14) is the first broadly usable eye tracking engine. It implements the ideas shown in Yeti3, where split-frame brightness measures are used to train a linear model for prediction. Yeti14 splits eye frames of nine calibration points in four quadrants. With the Scikit-Learn library a basic machine learning workflow is implemented.
+
+
 
 ### Roadmaps
 
