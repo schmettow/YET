@@ -1,17 +1,18 @@
 ## YETI 14: Collecting 2-dim calibration data for quadrant SBG
-## input = calibration point table
-## Results = table with target coordinates and quadrant brightness
+## Slideshow for mp4 files
+## coordinates for each frame
 
 import time
 
 YETA = 1
 YETA_NAME = "Yeta" + str(YETA)
-TITLE = "Yeta 1: Slideshow"
+TITLE = "Yeta 1: Slideshow mp4"
 AUTHOR = "M Schmettow, N Bierhuizen, GOF5(2021)"
 EYECASC = "haarcascade_eye.xml"
 PART_ID = str(time.time())
-RESULTS = "yeta2_" + PART_ID + ".csv"
-SLIDE_TIME = 2 # Set this to a long value for a user-controlled slideshow
+RESULTS = "yeta1_" + PART_ID + ".csv"
+FRAMES = "frames/Frames" + PART_ID 
+
 
 import sys
 from sys import exit
@@ -74,8 +75,7 @@ Font = pg.font.Font('freesansbold.ttf', int(15 * min(SCREEN_SIZE) / 800))
 SCREEN = pg.display.get_surface()
 font = pg.font.Font(None, 60)
 
-video_time = 5 #if video time is longer than the length of the video, the video will repeat automatically
-
+image_time = 1 #check which length is natural
 
 def main():
     ## Initial State
@@ -112,10 +112,15 @@ def main():
     OBS = np.zeros(shape=(0, len(OBS_cols)))
     obs = 0
 
-    videotarget = np.concatenate(read_coef("videos/videoInfo.csv", 1)).ravel() # Get the video names
+    frame_cols = ("Frame names")
+    videotarget = np.concatenate(read_coef("videos/videoInfo.csv", 1)).ravel() # Get the mp4 file names
+    row_count = 0
     video_amount = len(videotarget)
     video_shown = 1
-    videopath = "videos/" + videotarget[0]
+    frame_shown = 1
+    currentVid = videotarget[0]
+    videopath = "videos/" + currentVid
+    framepath = "frames/" + currentVid
 
     ## FAST LOOP
     while True:
@@ -239,29 +244,48 @@ def main():
             
         if STATE == "Timer":
             t1 = time.time()
+            write_coef(FRAMES + str(currentVid) + ".csv", frame_cols, "Creation")
+            clip = cv.VideoCapture(videopath)
+            getFrames(clip, framepath, currentVid)
+            #imgName, imgpath = getFrames(clip, framepath, currentVid)
+            #print(imgpath)
+            #frametarget = np.concatenate(read_coef(FRAMES)).ravel() # Get the frame names
+            frametarget = np.genfromtxt(FRAMES + str(currentVid) + ".csv", dtype=str, skip_header=1)
+            print("FT", frametarget)
+            row_count = frametarget.size
+            row_count = row_count-1
+            print(row_count)
             STATE = "Video"
 
         if STATE == "Video":
             obs = obs + 1 # observation number (starting with 10 after nine callibration targets)
-            print(obs)
+            #print(obs)
             this_id = (PART_ID, obs, time.time())
             this_bright = quad_bright(F_eye)
             this_quad = np.array(this_bright)
             this_quad.shape = (1, 4)
             this_pos = M_0.predict(this_quad)[0, :]
             this_obs = this_id
+            print(frame_shown)
             t2 = time.time()
             elapsed_time = t2 - t1 # elapsed time since STATE == "Video" started
-            if elapsed_time > video_time: #presented longer then defined: trial is over
-                if video_shown < video_amount: # check if all videos are presented
-                    video_shown += 1
-                    videopath = "videos/" + videotarget[video_shown-1] # video path for video (where 0 is the first video)
-                    STATE = "Quick"     
-                else:
-                    t3 = time.time()
-                    STATE = "Thank You"
-                    #print(STATE)
-            write_coef(RESULTS, flatten([this_obs, this_pos, videotarget[video_shown-1]]), "Data") # write the data (where 0 is the first video)
+            imgpath = str(framepath) + "frame" + str(frame_shown) + ".jpg"
+            print(imgpath)
+            if elapsed_time > image_time: #presented longer then defined: next frame
+                frame_shown += 1
+                if frame_shown > row_count: # check if all frames of the video (trial) are presented
+                    frame_shown = 1
+                    if video_shown < video_amount: # check if all videos are presented
+                        video_shown += 1
+                        currentVid = videotarget[video_shown-1]
+                        videopath = "videos/" + currentVid # video path for video (where 0 is the first video)
+                        framepath = "frames/" + currentVid # path where video frames should be saved (jpeg)
+                        STATE = "Quick"     
+                    else:
+                        t3 = time.time()
+                        STATE = "Thank You"
+                        #print(STATE)
+            write_coef(RESULTS, flatten([this_obs, this_pos, [videotarget[video_shown-1] + "_" + str(frame_shown)]]), "Data") # write the data (where 0 is the first video)
                 
         if STATE == "Adjust":
             this_bright = quad_bright(F_eye)
@@ -330,10 +354,14 @@ def main():
             draw_text("XOFF: " + str(H_offset), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .25), color=col_green)
             draw_text("YOFF: " + str(V_offset), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .3), color=col_green)
         elif STATE == "Video":
-            clip = VideoFileClip(videopath)
+            #clip = VideoFileClip(videopath)
             #clip = clip.subclip(0,2)#only first 2sec of video
-            clip = clip.resize(SCREEN_SIZE)
-            clip.preview()
+            #clip = clip.resize(SCREEN_SIZE)
+    
+            img = pg.image.load(imgpath)
+            img = pg.transform.smoothscale(img, SCREEN_SIZE)
+            SCREEN.blit(img, (0, 0))
+            #clip.preview() #not preview but blit! Otherwise no data during the video
         elif STATE == "Quick":
             drawTargets(SCREEN, targets, active=4)
             msg = "CLick on C when looking at the orange circle."
@@ -355,6 +383,28 @@ def drawTargets(screen, targets, active=0):
         cnt += 1
         pg.draw.circle(screen, color, pos, radius, stroke)
 
+## Get each frame of the videoclip
+def getFrames(vidcap, framepath, videoName):
+    success,image = vidcap.read()
+    count = 1
+    while success:
+      #framefile = framepath + "frame%d.jpg" % count
+      
+      #print(framefile)
+      cv.imwrite(framepath + "frame%d.jpg" % count, image)     # save frame as JPEG file in Frames folder   
+      frameName = str(videoName + "frame%d.jpg" % count)
+      framefile = framepath + "frame%d.jpg" % count
+      print(framefile)
+      write_coef(FRAMES + str(videoName) + ".csv", framefile, "Data") 
+      #print(framefile)
+      #cv.imwrite(framefile, image)
+      success,image = vidcap.read()
+      print('Read a new frame: ', success)
+      count += 1
+    #return frameName, framefile
+  
+
+    
 
 ## Converts a cv framebuffer into Pygame image (surface!)
 def frame_to_surf(frame, dim):
@@ -418,11 +468,11 @@ def write_coef(filename, text, option):
     if option == "Creation":
         with open(filename, "w") as csvfile:  # write in Data.csv and append the new info to the bottom
             writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)  # library usages
-            writer.writerow(text)  # write the text
+            writer.writerow([text])  # write the text
     elif option == "Data":
         with open(filename, "a", newline='\n') as csvfile:
             writer = csv.writer(csvfile)
-            writer.writerow(text)
+            writer.writerow([text])
 
 
 def read_coef(filename, dim):
