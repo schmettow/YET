@@ -1,17 +1,29 @@
 ## YETI 14: Collecting 2-dim calibration data for quadrant SBG
 ## input = images
-## Results = table with target coordinates and quadrant brightness
+## Results = table with Part. Picture, time, eye tracking coordinates
 
 import time
 
+## Meta data of Yeta
 YETA = 1
 YETA_NAME = "Yeta" + str(YETA)
+YETA_DIR = "yeta/" + str(YETA) + "/"
 TITLE = "Yeta 1: Slideshow"
 AUTHOR = "M Schmettow, N Bierhuizen, GOF5(2021)"
-EYECASC = "haarcascade_eye.xml"
-PART_ID = str(time.time())
-RESULTS = "yeta2_" + PART_ID + ".csv"
-SLIDE_TIME = 2 # Set this to a long value for a user-controlled slideshow
+EYECASC = "trained_models/haarcascade_eye.xml"
+
+## Experiment
+EXP_ID = "UV22"
+EXPERIMENTER = "Martin"
+IMG_PATH = "yeta/1/UV22/"
+IMG_INFO = IMG_PATH + "PictureInfo.csv"
+RESULT_DIR = YETA_DIR
+PART_ID = str(int(time.time()))
+RESULT_FILE = RESULT_DIR + "yeta1_" + EXP_ID + EXPERIMENTER + PART_ID + ".csv"
+SCREEN_W = 1000
+SCREEN_H = 1000
+USB = 1 # Set the video device (typically 1, sometimes 0 or 2)
+SLIDE_TIME = 1 # Set this to a long value for a user-controlled slideshow
 
 import sys
 import os
@@ -20,7 +32,10 @@ import logging as log
 # DS
 import numpy as np
 from sklearn import linear_model as lm
+import pandas as pd
 import csv
+
+
 # CV
 import cv2 as cv
 # PG
@@ -31,7 +46,7 @@ from pygame.locals import *
 
 # CV
 log.basicConfig(filename='YET.log', level=log.INFO)
-YET = cv.VideoCapture(1)
+YET = cv.VideoCapture(USB)
 if YET.isOpened():
     width = int(YET.get(cv.CAP_PROP_FRAME_WIDTH))
     height = int(YET.get(cv.CAP_PROP_FRAME_HEIGHT))
@@ -39,7 +54,16 @@ if YET.isOpened():
     dim = (width, height)
 else:
     print('Unable to load camera.')
-    exit()
+    sys.exit()
+
+# Reading picture infos
+if os.path.isfile(IMG_INFO):
+    IMGS = pd.read_csv(IMG_INFO)
+    print(IMGS)
+else:
+    print(IMG_INFO  + ' not found. CWD: ' + os.getcwd())
+    sys.exit()
+
 
 # Reading the CV model for eye detection
 if os.path.isfile(EYECASC):
@@ -59,8 +83,6 @@ col_green_dim = (0, 60, 0)
 col_yellow_dim = (120, 120, 0)
 
 ## width and height in pixel
-SCREEN_W = 1000
-SCREEN_H = 800
 SCREEN_SIZE = (SCREEN_W, SCREEN_H)
 
 pg.init()
@@ -71,8 +93,6 @@ Font = pg.font.Font('freesansbold.ttf', int(15 * min(SCREEN_SIZE) / 800))
 
 SCREEN = pg.display.get_surface()
 font = pg.font.Font(None, 60)
-
-picture_time = 5
 
 
 def main():
@@ -98,22 +118,23 @@ def main():
     
     n_targets = len(targets) # How many calibrationpoints are there
     active_target = 0
-    run = 0
     H_offset, V_offset = (0, 0)
     this_pos = (0, 0)
 
     Eyes = []
-    OBS_cols = ("Part", "Obs", "time","x", "y", "Picture")
-    #write_coef(RESULTS, flatten([OBS_cols, ["Picture"]]), "Creation")
-    write_coef(RESULTS, OBS_cols, "Creation")
-    CAL = np.zeros(shape=(0, 8))
-    OBS = np.zeros(shape=(0, len(OBS_cols)))
-    obs = 0
 
-    picturetarget = np.concatenate(read_coef("Images/PictureInfo.csv", 1)).ravel() # Get the picture names
+    OBS_cols = ("Part", "Picture", "time","x", "y") 
+    OBS = pd.DataFrame(columns = OBS_cols, dtype = "float64")
+    OBS["Picture"].astype("category")
+    #OBS = pd.DataFrame({'Part':1, 'Picture':"Pic", 'time': 0, 'x':0, 'y':0}, index = [0])
+    obs = 0
+    CAL = np.zeros(shape=(0, 6))
+
+    picturetarget = IMGS["File"] #np.concatenate(read_coef(IMG_PATH + "PictureInfo.csv", 1)).ravel() # Get the picture names
     picture_amount = len(picturetarget)
     picture_shown = 1
-    imagepath = "Images/" + picturetarget[0]
+    this_image = picturetarget[0]
+    this_path = IMG_PATH + this_image
 
     ## FAST LOOP
     while True:
@@ -138,15 +159,11 @@ def main():
                 F_eye = F_gray[y_eye:y_eye + h_eye, x_eye:x_eye + w_eye]
             else:
                 DETECTED = False
-                # F_eye = F_gray
-                # w_eye, h_eye = (width, height)
         else:
             F_eye = F_gray[y_eye:y_eye + h_eye, x_eye:x_eye + w_eye]
 
         if STATE == "Validate":
-            this_quad = np.array(quad_bright(F_eye))
-            this_quad.shape = (1, 4)
-            this_pos = M_0.predict(this_quad)[0, :]
+            this_pos = predict_pos(F_eye, M_0)
             # print(this_pos)
 
         ## Event handling
@@ -158,103 +175,95 @@ def main():
                         this_Eye = Eyes[0]
                         x_eye, y_eye, w_eye, h_eye = this_Eye
                         STATE = "Target"
-                        print(STATE + str(active_target))
-
             elif STATE == "Target":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Measure"
-                    print(STATE + str(active_target))
             elif STATE == "Validate":
                 if event.type == KEYDOWN and event.key == K_SPACE:
-                    STATE = "Timer"
+                    STATE = "prepareImage"
                 elif event.type == KEYDOWN and event.key == K_BACKSPACE:
                     STATE = "Target"
                     active_target = 0  # reset
-                    run = run + 1
             elif STATE == "Save":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Train"
                 if event.type == KEYDOWN and event.key == K_RETURN:
                     STATE = "Save"
-                    print(OBS)
                 if event.type == KEYDOWN and event.key == K_BACKSPACE:
                     STATE = "Target"
                     active_target = 0  # reset
-                    run = run + 1
-#           elif STATE == "Image":
-#               if event.type == KEYDOWN and event.key == K_SPACE:
-#                   STATE = "Train"
-#               elif event.type == KEYDOWN and event.key == K_c:
-#                   STATE = "Quick"
+            # elif STATE == "Image":
+            #    if event.type == KEYDOWN and event.key == K_SPACE:
+            #        STATE = "Quick"
             elif STATE == "Quick":
-#                if event.type == KEYUP and event.key == K_c:
-                if event.type == KEYDOWN and event.key == K_c:
-                    STATE = "Adjust"
+                if event.type == KEYDOWN and event.key == K_SPACE:
+                    eyex, eyey = predict_pos(F_eye, M_0)
+                    H_offset = float(targets[4][0]) - float(eyex)
+                    V_offset = float(targets[4][1]) - float(eyey)
+                    STATE = "prepareImage"
 
-        if event.type == QUIT:
-            YET.release()
-            pg.quit()
-            sys.exit()
+            if event.type == QUIT:
+                YET.release()
+                pg.quit()
+                sys.exit()
+
 
         # Automatic transitionals
         if STATE == "Measure":
             obs = obs + 1
-            this_id = (obs, run)
-            this_targ = tuple(np.array(targets[active_target][0:2]))
-            print(np.shape(this_targ))
-            this_bright = quad_bright(F_eye)
-            this_obs = this_id + this_bright + this_targ
+            targetx, targety = np.array(targets[active_target][0:2])
+            this_measure = quad_bright(F_eye)
+            this_obs = this_measure + (targetx, targety) # combines arrays
             CAL = np.vstack((CAL, this_obs))
-
             if (active_target + 1) < n_targets:
                 active_target = active_target + 1
                 STATE = "Target"
                 print(STATE + str(active_target))
             else:
-                print(CAL)
                 STATE = "Save"
+                print(STATE)
 
         if STATE == "Train":
             M_0 = train_QBG(CAL)
             STATE = "Validate"
-            
-        if STATE == "Timer":
-            t1 = time.time()
-            STATE = "Image"
+            print(STATE)
 
+        if STATE == "prepareImage":
+            picture_shown += 1
+            this_image = IMGS["File"][picture_shown - 1]
+            this_path = IMG_PATH + this_image
+            IMG = pg.image.load(this_path)
+            IMG = pg.transform.smoothscale(IMG, SCREEN_SIZE)
+            this_xscale = SCREEN_W/IMG.get_width()
+            this_yscale = SCREEN_H/IMG.get_height()
+            t_image_started = time.time()
+            STATE = "Image"
+            
         if STATE == "Image":
             obs = obs + 1 # observation number
-            this_id = (PART_ID, obs, time.time())
-            this_bright = quad_bright(F_eye)
-            this_quad = np.array(this_bright)
-            this_quad.shape = (1, 4)
-            this_pos = M_0.predict(this_quad)[0, :]
-            this_obs = this_id
-            t2 = time.time()
-            elapsed_time = t2 - t1 # elapsed time since STATE == "Image" started
-            if elapsed_time > picture_time: #presented longer then defined: trial is over
+            eyex, eyey = predict_pos(F_eye, M_0)
+            this_pos = (eyex, eyey)
+            elapsed_time = time.time() - t_image_started # elapsed time since STATE == "Image" started
+            if elapsed_time > SLIDE_TIME: #presented longer then defined: trial is over
+                OBS.to_csv(RESULT_FILE, index = False) ## auto save results after every slide
                 if picture_shown < picture_amount: # check for the amount of picture shown
-                    picture_shown += 1
-                    imagepath = "Images/" + picturetarget[picture_shown-1] # image path for picture (where 0 is the first picture)
-                    STATE = "Quick"     
+                    STATE = "Quick"
+                    print(STATE)    
                 else:
                     t3 = time.time()
                     STATE = "Thank You"
-                    #print(STATE)
-            write_coef(RESULTS, flatten([this_obs, this_pos, picturetarget[picture_shown-1]]), "Data") # write the data (where 0 is the first picture)
+                    print(STATE)
+            this_OBS = pd.DataFrame({"Part": PART_ID, "Picture": this_image, "time" : time.time(), "x": eyex * this_xscale, "y": eyey * this_yscale}, index = [0])
+            OBS = pd.concat([OBS, this_OBS])
                 
-        if STATE == "Adjust":
-            this_bright = quad_bright(F_eye)
-            this_quad = np.array(this_bright)
-            this_quad.shape = (1, 4)
-            this_pos = M_0.predict(this_quad)[0, :]
-            H_offset = float(targets[4][0]) - float(this_pos[0])
-            V_offset = float(targets[4][1]) - float(this_pos[1])
-            STATE = "Validate"
             
         # Show thank you screen
         if STATE == "Thank You":
             if time.time() - t3 > 3: #after 3sec
+                STATE = "Exit"
+                print(STATE)
+                OBS.to_csv(RESULT_FILE, index = False)
+                print("Saved to " + RESULT_FILE)
                 YET.release()
                 pg.quit()
                 sys.exit()
@@ -281,7 +290,7 @@ def main():
         elif STATE == "Target":
             if DETECTED:
                 drawTargets(SCREEN, targets, active_target)
-            msg = "Press Space while looking at the orange circle."
+            msg = "Follow the orange light and press Space."
             draw_text(msg, (SCREEN_SIZE[0]* .1, SCREEN_SIZE[1] * .75), color=col_green)
         elif STATE == "Validate":
             msg = "Press Space to continue the experiment."
@@ -297,12 +306,10 @@ def main():
             draw_text("XOFF: " + str(H_offset), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .25), color=col_green)
             draw_text("YOFF: " + str(V_offset), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .3), color=col_green)
         elif STATE == "Image":
-            img = pg.image.load(imagepath)
-            img = pg.transform.smoothscale(img, SCREEN_SIZE)
-            SCREEN.blit(img, (0, 0))
+            SCREEN.blit(IMG, (0, 0))
         elif STATE == "Quick":
             drawTargets(SCREEN, targets, active=4)
-            msg = "CLick on C when looking at the orange circle."
+            msg = "Look at the orange circle and press Space."
             draw_text(msg, (SCREEN_SIZE[0] * .05, SCREEN_SIZE[1] * .75), color=col_green)
         elif STATE == "Thank You":
             draw_thank_you()
@@ -367,17 +374,21 @@ def quad_bright(frame):
 
 
 def train_QBG(Obs):
-    Quad = Obs[:, 2:6]
-    Pos = Obs[:, 6:8]
+    Quad = Obs[:, 0:4]
+    Pos = Obs[:, 4:6]
     model = lm.LinearRegression()
     model.fit(Quad, Pos)
     return model
 
 
 # Predicts position based on quad-split
-def predict_pos(data, model):
-    predictions = model.predict(data)
-    return predictions
+def predict_pos(frame, model):
+    bright = quad_bright(frame)
+    quad = np.array(bright)
+    quad.shape = (1, 4)
+    eyex, eyey = model.predict(quad)[0, :]
+    return eyex, eyey
+
 
 
 def write_coef(filename, text, option):
