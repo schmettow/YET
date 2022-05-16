@@ -1,32 +1,34 @@
-## YETI 14: Collecting 2-dim calibration data for quadrant SBG
-## input = images
-## Results = table with Part. Picture, time, eye tracking coordinates
+## YETA 1 Slideshow with YET
+## Input: Images and PictureInfo.csv file
+## Results = table with Part, Picture, time, eye tracking coordinates
 
+import sys
+import os
 import time
+
+WD = os.path.dirname(sys.argv[0])
+os.chdir(WD)
 
 ## Meta data of Yeta
 YETA = 1
 YETA_NAME = "Yeta" + str(YETA)
-YETA_DIR = "yeta/" + str(YETA) + "/"
 TITLE = "Yeta 1: Slideshow"
 AUTHOR = "M Schmettow, N Bierhuizen, GOF5(2021)"
-EYECASC = "trained_models/haarcascade_eye.xml"
+EYECASC = "haarcascade_eye.xml"
 
 ## Experiment
 EXP_ID = "UV22"
-EXPERIMENTER = "Martin"
-IMG_PATH = "yeta/1/UV22/"
-IMG_INFO = IMG_PATH + "PictureInfo.csv"
-RESULT_DIR = YETA_DIR
+EXPERIMENTER = "MS"
+IMG_PATH = os.path.join(WD, "Images")
+IMG_INFO = os.path.join(IMG_PATH, "PictureInfo.csv")
+RESULT_DIR = "CSV"
 PART_ID = str(int(time.time()))
-RESULT_FILE = RESULT_DIR + "yeta1_" + EXP_ID + EXPERIMENTER + PART_ID + ".csv"
+RESULT_FILE = os.path.join(RESULT_DIR, "yeta1_" + EXP_ID + EXPERIMENTER + PART_ID + ".csv")
 SCREEN_W = 1000
 SCREEN_H = 1000
 USB = 1 # Set the video device (typically 1, sometimes 0 or 2)
 SLIDE_TIME = 1 # Set this to a long value for a user-controlled slideshow
 
-import sys
-import os
 import logging as log
 
 # DS
@@ -123,18 +125,17 @@ def main():
 
     Eyes = []
 
-    OBS_cols = ("Part", "Picture", "time","x", "y") 
+    OBS_cols = ("Part", "Picture", "time","xraw", "yraw", "x", "y") 
     OBS = pd.DataFrame(columns = OBS_cols, dtype = "float64")
     OBS["Picture"].astype("category")
-    #OBS = pd.DataFrame({'Part':1, 'Picture':"Pic", 'time': 0, 'x':0, 'y':0}, index = [0])
     obs = 0
     CAL = np.zeros(shape=(0, 6))
 
-    picturetarget = IMGS["File"] #np.concatenate(read_coef(IMG_PATH + "PictureInfo.csv", 1)).ravel() # Get the picture names
+    picturetarget = IMGS["File"]
     picture_amount = len(picturetarget)
     picture_shown = 1
     this_image = picturetarget[0]
-    this_path = IMG_PATH + this_image
+    this_path = os.path.join(IMG_PATH, this_image)
 
     ## FAST LOOP
     while True:
@@ -159,6 +160,7 @@ def main():
                 F_eye = F_gray[y_eye:y_eye + h_eye, x_eye:x_eye + w_eye]
             else:
                 DETECTED = False
+        # in all other states, the eye coordinates are updated
         else:
             F_eye = F_gray[y_eye:y_eye + h_eye, x_eye:x_eye + w_eye]
 
@@ -231,17 +233,19 @@ def main():
         if STATE == "prepareImage":
             picture_shown += 1
             this_image = IMGS["File"][picture_shown - 1]
-            this_path = IMG_PATH + this_image
+            this_path = os.path.join(IMG_PATH, this_image)
             IMG = pg.image.load(this_path)
-            IMG = pg.transform.smoothscale(IMG, SCREEN_SIZE)
             this_xscale = SCREEN_W/IMG.get_width()
             this_yscale = SCREEN_H/IMG.get_height()
+            IMG = pg.transform.smoothscale(IMG, SCREEN_SIZE)
             t_image_started = time.time()
             STATE = "Image"
             
         if STATE == "Image":
             obs = obs + 1 # observation number
             eyex, eyey = predict_pos(F_eye, M_0)
+            eyex = eyex + H_offset
+            eyey = eyey + V_offset
             this_pos = (eyex, eyey)
             elapsed_time = time.time() - t_image_started # elapsed time since STATE == "Image" started
             if elapsed_time > SLIDE_TIME: #presented longer then defined: trial is over
@@ -253,7 +257,10 @@ def main():
                     t3 = time.time()
                     STATE = "Thank You"
                     print(STATE)
-            this_OBS = pd.DataFrame({"Part": PART_ID, "Picture": this_image, "time" : time.time(), "x": eyex * this_xscale, "y": eyey * this_yscale}, index = [0])
+            this_OBS = pd.DataFrame({"Part": PART_ID, "Picture": this_image, 
+                                    "time" : time.time(), 
+                                    "xraw": eyex, "yraw": eyey, 
+                                    "x": eyex/this_xscale, "y": eyey/this_yscale}, index = [0])
             OBS = pd.concat([OBS, this_OBS])
                 
             
@@ -297,8 +304,8 @@ def main():
             draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .75), color=col_green)
             msg = "Press Backspace to redo the calibration and reset the experiment."
             draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .8), color=col_green)
-            draw_rect(this_pos[0] + H_offset - 1, 0, 2, SCREEN_H, stroke_size=1, color=col_green)
-            draw_rect(0, this_pos[1] + V_offset - 1, SCREEN_W, 2, stroke_size=1, color=col_green)
+            draw_rect(this_pos[0] + H_offset, 0, 2, SCREEN_H, stroke_size=1, color=col_green)
+            draw_rect(0, this_pos[1] + V_offset, SCREEN_W, 2, stroke_size=1, color=col_green)
             # diagnostics
 
             draw_text("HPOS: " + str(np.round(this_pos[0])), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .15), color=col_green)
