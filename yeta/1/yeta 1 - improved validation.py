@@ -1,43 +1,26 @@
-## YETA 1 Slideshow with YET
-## Input: Images and PictureInfo.csv file
-## Results = table with Part, Picture, time, eye tracking coordinates
+## YETI 14: Collecting 2-dim calibration data for quadrant SBG
+## input = calibration point table
+## Results = table with target coordinates and quadrant brightness
 
-import sys
-import os
 import time
 
-WD = os.path.dirname(sys.argv[0])
-os.chdir(WD)
-
-## Meta data of Yeta
 YETA = 1
 YETA_NAME = "Yeta" + str(YETA)
 TITLE = "Yeta 1: Slideshow"
 AUTHOR = "M Schmettow, N Bierhuizen, GOF5(2021)"
 EYECASC = "haarcascade_eye.xml"
+PART_ID = str(time.time())
+RESULTS = "yeta2_" + PART_ID + ".csv"
+SLIDE_TIME = 2 # Set this to a long value for a user-controlled slideshow
 
-## Experiment
-EXP_ID = "UV22"
-EXPERIMENTER = "MS"
-IMG_PATH = os.path.join(WD, "Images")
-IMG_INFO = os.path.join(IMG_PATH, "PictureInfo.csv")
-RESULT_DIR = "CSV"
-PART_ID = str(int(time.time()))
-RESULT_FILE = os.path.join(RESULT_DIR, "yeta1_" + EXP_ID + EXPERIMENTER + PART_ID + ".csv")
-SCREEN_W = 1000
-SCREEN_H = 1000
-USB = 1 # Set the video device (typically 1, sometimes 0 or 2)
-SLIDE_TIME = 1 # Set this to a long value for a user-controlled slideshow
-
+import sys
+import os
 import logging as log
 
 # DS
 import numpy as np
 from sklearn import linear_model as lm
-import pandas as pd
 import csv
-
-
 # CV
 import cv2 as cv
 # PG
@@ -48,7 +31,7 @@ from pygame.locals import *
 
 # CV
 log.basicConfig(filename='YET.log', level=log.INFO)
-YET = cv.VideoCapture(USB)
+YET = cv.VideoCapture(1)
 if YET.isOpened():
     width = int(YET.get(cv.CAP_PROP_FRAME_WIDTH))
     height = int(YET.get(cv.CAP_PROP_FRAME_HEIGHT))
@@ -56,16 +39,7 @@ if YET.isOpened():
     dim = (width, height)
 else:
     print('Unable to load camera.')
-    sys.exit()
-
-# Reading picture infos
-if os.path.isfile(IMG_INFO):
-    IMGS = pd.read_csv(IMG_INFO)
-    print(IMGS)
-else:
-    print(IMG_INFO  + ' not found. CWD: ' + os.getcwd())
-    sys.exit()
-
+    exit()
 
 # Reading the CV model for eye detection
 if os.path.isfile(EYECASC):
@@ -85,6 +59,8 @@ col_green_dim = (0, 60, 0)
 col_yellow_dim = (120, 120, 0)
 
 ## width and height in pixel
+SCREEN_W = 1000
+SCREEN_H = 800
 SCREEN_SIZE = (SCREEN_W, SCREEN_H)
 
 pg.init()
@@ -95,6 +71,8 @@ Font = pg.font.Font('freesansbold.ttf', int(15 * min(SCREEN_SIZE) / 800))
 
 SCREEN = pg.display.get_surface()
 font = pg.font.Font(None, 60)
+
+picture_time = 5
 
 
 def main():
@@ -120,22 +98,22 @@ def main():
     
     n_targets = len(targets) # How many calibrationpoints are there
     active_target = 0
+    run = 0
     H_offset, V_offset = (0, 0)
     this_pos = (0, 0)
 
     Eyes = []
-
-    OBS_cols = ("Part", "Picture", "time","xraw", "yraw", "x", "y") 
-    OBS = pd.DataFrame(columns = OBS_cols, dtype = "float64")
-    OBS["Picture"].astype("category")
+    OBS_cols = ("Part", "Obs", "time","x", "y", "Picture")
+    #write_coef(RESULTS, flatten([OBS_cols, ["Picture"]]), "Creation")
+    write_coef(RESULTS, OBS_cols, "Creation")
+    CAL = np.zeros(shape=(0, 8))
+    OBS = np.zeros(shape=(0, len(OBS_cols)))
     obs = 0
-    CAL = np.zeros(shape=(0, 6))
 
-    picturetarget = IMGS["File"]
+    picturetarget = np.concatenate(read_coef("Images/PictureInfo.csv", 1)).ravel() # Get the picture names
     picture_amount = len(picturetarget)
     picture_shown = 1
-    this_image = picturetarget[0]
-    this_path = os.path.join(IMG_PATH, this_image)
+    imagepath = "Images/" + picturetarget[0]
 
     ## FAST LOOP
     while True:
@@ -160,12 +138,15 @@ def main():
                 F_eye = F_gray[y_eye:y_eye + h_eye, x_eye:x_eye + w_eye]
             else:
                 DETECTED = False
-        # in all other states, the eye coordinates are updated
+                # F_eye = F_gray
+                # w_eye, h_eye = (width, height)
         else:
             F_eye = F_gray[y_eye:y_eye + h_eye, x_eye:x_eye + w_eye]
 
-        if STATE == "Validate":
-            this_pos = predict_pos(F_eye, M_0)
+        if STATE == "Validate1" or STATE == "Validate2":
+            this_quad = np.array(quad_bright(F_eye))
+            this_quad.shape = (1, 4)
+            this_pos = M_0.predict(this_quad)[0, :]
             # print(this_pos)
 
         ## Event handling
@@ -177,100 +158,120 @@ def main():
                         this_Eye = Eyes[0]
                         x_eye, y_eye, w_eye, h_eye = this_Eye
                         STATE = "Target"
+                        print(STATE + str(active_target))
+
             elif STATE == "Target":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Measure"
-            elif STATE == "Validate":
+                    print(STATE + str(active_target))
+            elif STATE == "Validate1":
+                if event.type == KEYDOWN and event.key == K_LEFT:
+                        H_offset -= 5
+                if event.type == KEYDOWN and event.key == K_RIGHT:
+                        H_offset += 5
+                if event.type == KEYDOWN and event.key == K_x: # press the X key to reset the offset
+                        H_offset = 0
+                if event.type == KEYDOWN and event.key == K_DOWN:
+                        V_offset -= 5
+                if event.type == KEYDOWN and event.key == K_UP:
+                        V_offset += 5
+                if event.type == KEYDOWN and event.key == K_y: # press the Y key to reset the offset
+                        V_offset = 0
                 if event.type == KEYDOWN and event.key == K_SPACE:
-                    STATE = "prepareImage"
+                    STATE = "Timer"
                 elif event.type == KEYDOWN and event.key == K_BACKSPACE:
                     STATE = "Target"
                     active_target = 0  # reset
+                    run = run + 1
+            elif STATE == "Validate2":
+                if event.type == KEYDOWN and event.key == K_SPACE:
+                    STATE = "Timer"
+                elif event.type == KEYDOWN and event.key == K_BACKSPACE:
+                    STATE = "Quick"
             elif STATE == "Save":
                 if event.type == KEYDOWN and event.key == K_SPACE:
                     STATE = "Train"
                 if event.type == KEYDOWN and event.key == K_RETURN:
                     STATE = "Save"
+                    print(OBS)
                 if event.type == KEYDOWN and event.key == K_BACKSPACE:
                     STATE = "Target"
                     active_target = 0  # reset
-            # elif STATE == "Image":
-            #    if event.type == KEYDOWN and event.key == K_SPACE:
-            #        STATE = "Quick"
+                    run = run + 1
+#           elif STATE == "Image":
+#               if event.type == KEYDOWN and event.key == K_SPACE:
+#                   STATE = "Train"
+#               elif event.type == KEYDOWN and event.key == K_c:
+#                   STATE = "Quick"
             elif STATE == "Quick":
-                if event.type == KEYDOWN and event.key == K_SPACE:
-                    eyex, eyey = predict_pos(F_eye, M_0)
-                    H_offset = float(targets[4][0]) - float(eyex)
-                    V_offset = float(targets[4][1]) - float(eyey)
-                    STATE = "prepareImage"
+#                if event.type == KEYUP and event.key == K_c:
+                if event.type == KEYDOWN and event.key == K_c:
+                    STATE = "Adjust"
 
-            if event.type == QUIT:
-                YET.release()
-                pg.quit()
-                sys.exit()
-
+        if event.type == QUIT:
+            YET.release()
+            pg.quit()
+            sys.exit()
 
         # Automatic transitionals
         if STATE == "Measure":
             obs = obs + 1
-            targetx, targety = np.array(targets[active_target][0:2])
-            this_measure = quad_bright(F_eye)
-            this_obs = this_measure + (targetx, targety) # combines arrays
+            this_id = (obs, run)
+            this_targ = tuple(np.array(targets[active_target][0:2]))
+            print(np.shape(this_targ))
+            this_bright = quad_bright(F_eye)
+            this_obs = this_id + this_bright + this_targ
             CAL = np.vstack((CAL, this_obs))
+
             if (active_target + 1) < n_targets:
                 active_target = active_target + 1
                 STATE = "Target"
                 print(STATE + str(active_target))
             else:
+                print(CAL)
                 STATE = "Save"
-                print(STATE)
 
         if STATE == "Train":
             M_0 = train_QBG(CAL)
-            STATE = "Validate"
-            print(STATE)
-
-        if STATE == "prepareImage":
-            picture_shown += 1
-            this_image = IMGS["File"][picture_shown - 1]
-            this_path = os.path.join(IMG_PATH, this_image)
-            IMG = pg.image.load(this_path)
-            this_xscale = SCREEN_W/IMG.get_width()
-            this_yscale = SCREEN_H/IMG.get_height()
-            IMG = pg.transform.smoothscale(IMG, SCREEN_SIZE)
-            t_image_started = time.time()
-            STATE = "Image"
+            STATE = "Validate1"
             
+        if STATE == "Timer":
+            t1 = time.time()
+            STATE = "Image"
+
         if STATE == "Image":
             obs = obs + 1 # observation number
-            eyex, eyey = predict_pos(F_eye, M_0)
-            eyex = eyex + H_offset
-            eyey = eyey + V_offset
-            this_pos = (eyex, eyey)
-            elapsed_time = time.time() - t_image_started # elapsed time since STATE == "Image" started
-            if elapsed_time > SLIDE_TIME: #presented longer then defined: trial is over
-                OBS.to_csv(RESULT_FILE, index = False) ## auto save results after every slide
+            this_id = (PART_ID, obs, time.time())
+            this_bright = quad_bright(F_eye)
+            this_quad = np.array(this_bright)
+            this_quad.shape = (1, 4)
+            this_pos = M_0.predict(this_quad)[0, :]
+            this_obs = this_id
+            t2 = time.time()
+            elapsed_time = t2 - t1 # elapsed time since STATE == "Image" started
+            if elapsed_time > picture_time: #presented longer then defined: trial is over
                 if picture_shown < picture_amount: # check for the amount of picture shown
-                    STATE = "Quick"
-                    print(STATE)    
+                    picture_shown += 1
+                    imagepath = "Images/" + picturetarget[picture_shown-1] # image path for picture (where 0 is the first picture)
+                    STATE = "Quick"     
                 else:
                     t3 = time.time()
                     STATE = "Thank You"
-                    print(STATE)
-            this_OBS = pd.DataFrame({"Part": PART_ID, "Picture": this_image, 
-                                    "time" : time.time(), 
-                                    "xraw": eyex, "yraw": eyey, 
-                                    "x": eyex/this_xscale, "y": eyey/this_yscale}, index = [0])
-            OBS = pd.concat([OBS, this_OBS])
+                    #print(STATE)
+            write_coef(RESULTS, flatten([this_obs, this_pos, picturetarget[picture_shown-1]]), "Data") # write the data (where 0 is the first picture)
                 
+        if STATE == "Adjust":
+            this_bright = quad_bright(F_eye)
+            this_quad = np.array(this_bright)
+            this_quad.shape = (1, 4)
+            this_pos = M_0.predict(this_quad)[0, :]
+            H_offset = float(targets[4][0]) - float(this_pos[0])
+            V_offset = float(targets[4][1]) - float(this_pos[1])
+            STATE = "Validate2"
             
         # Show thank you screen
         if STATE == "Thank You":
             if time.time() - t3 > 3: #after 3sec
-                STATE = "Exit"
-                print(STATE)
-                OBS.to_csv(RESULT_FILE, index = False)
-                print("Saved to " + RESULT_FILE)
                 YET.release()
                 pg.quit()
                 sys.exit()
@@ -297,26 +298,41 @@ def main():
         elif STATE == "Target":
             if DETECTED:
                 drawTargets(SCREEN, targets, active_target)
-            msg = "Follow the orange light and press Space."
+            msg = "Press Space while looking at the orange circle."
             draw_text(msg, (SCREEN_SIZE[0]* .1, SCREEN_SIZE[1] * .75), color=col_green)
-        elif STATE == "Validate":
+        elif STATE == "Validate1":
+            msg = "Use arrows to change the offset if necessary. Press 'X' or 'Y' to reset the offsets."
+            draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .7), color=col_green)
             msg = "Press Space to continue the experiment."
             draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .75), color=col_green)
             msg = "Press Backspace to redo the calibration and reset the experiment."
             draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .8), color=col_green)
-            draw_rect(this_pos[0] + H_offset, 0, 2, SCREEN_H, stroke_size=1, color=col_green)
-            draw_rect(0, this_pos[1] + V_offset, SCREEN_W, 2, stroke_size=1, color=col_green)
+            draw_rect(this_pos[0] + H_offset - 1, 0, 2, SCREEN_H, stroke_size=1, color=col_green)
+            draw_rect(0, this_pos[1] + V_offset - 1, SCREEN_W, 2, stroke_size=1, color=col_green)
             # diagnostics
-
+            draw_text("HPOS: " + str(np.round(this_pos[0])), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .15), color=col_green)
+            draw_text("VPOS: " + str(np.round(this_pos[1])), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .2), color=col_green)
+            draw_text("XOFF: " + str(H_offset), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .25), color=col_green)
+            draw_text("YOFF: " + str(V_offset), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .3), color=col_green)
+        elif STATE == "Validate2":
+            msg = "Press Space to continue the experiment."
+            draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .75), color=col_green)
+            msg = "Press Backspace to redo the centring."
+            draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .8), color=col_green)
+            draw_rect(this_pos[0] + H_offset - 1, 0, 2, SCREEN_H, stroke_size=1, color=col_green)
+            draw_rect(0, this_pos[1] + V_offset - 1, SCREEN_W, 2, stroke_size=1, color=col_green)
+            # diagnostics
             draw_text("HPOS: " + str(np.round(this_pos[0])), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .15), color=col_green)
             draw_text("VPOS: " + str(np.round(this_pos[1])), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .2), color=col_green)
             draw_text("XOFF: " + str(H_offset), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .25), color=col_green)
             draw_text("YOFF: " + str(V_offset), (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .3), color=col_green)
         elif STATE == "Image":
-            SCREEN.blit(IMG, (0, 0))
+            img = pg.image.load(imagepath)
+            img = pg.transform.smoothscale(img, SCREEN_SIZE)
+            SCREEN.blit(img, (0, 0))
         elif STATE == "Quick":
             drawTargets(SCREEN, targets, active=4)
-            msg = "Look at the orange circle and press Space."
+            msg = "CLick on C when looking at the orange circle."
             draw_text(msg, (SCREEN_SIZE[0] * .05, SCREEN_SIZE[1] * .75), color=col_green)
         elif STATE == "Thank You":
             draw_thank_you()
@@ -381,21 +397,17 @@ def quad_bright(frame):
 
 
 def train_QBG(Obs):
-    Quad = Obs[:, 0:4]
-    Pos = Obs[:, 4:6]
+    Quad = Obs[:, 2:6]
+    Pos = Obs[:, 6:8]
     model = lm.LinearRegression()
     model.fit(Quad, Pos)
     return model
 
 
 # Predicts position based on quad-split
-def predict_pos(frame, model):
-    bright = quad_bright(frame)
-    quad = np.array(bright)
-    quad.shape = (1, 4)
-    eyex, eyey = model.predict(quad)[0, :]
-    return eyex, eyey
-
+def predict_pos(data, model):
+    predictions = model.predict(data)
+    return predictions
 
 
 def write_coef(filename, text, option):
@@ -431,7 +443,7 @@ def draw_thank_you():
     SCREEN.blit(text_surface, text_rectangle)
     text_surface = FONT.render("For participation", True, col_white, col_black)
     text_rectangle = text_surface.get_rect()
-    text_rectangle.center = (SCREEN_SIZE[0] * 0.5, SCREEN_SIZE[1] * 0.5)
+    text_rectangle.center = (SCREEN_SIZE[0] * 0.5, SCREEN_SIZE[1] * 0.4)
     SCREEN.blit(text_surface, text_rectangle)
 
 
