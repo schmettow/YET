@@ -1,0 +1,444 @@
+---
+title: "YET with R basic workflow"
+author: "M Schmettow"
+date: "09/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.width = 8)
+knitr::opts_chunk$set(fig.height = 8)
+data_path = "CSV"
+```
+
+```{r}
+library(tidyverse)
+library(printr)
+
+require(readxl)
+require(jpeg)
+require(ggimg)
+```
+
+# Preparation
+
+```{r}
+WIDTH = 450
+HEIGHT = 450
+IMG_DIR = "Stimuli/"
+```
+
+## Reading csv
+
+```{r}
+# csv_files <- dir(path = data_path,
+#                  pattern = "*.csv",
+#                  recursive = T,
+#                  full.names = T)
+
+csv_files <- "Data/yeta1_UV22MS1663266938.csv"
+
+UV22_0 <- 
+  csv_files %>% 
+  map_df(~read_csv(.x, 
+                   col_types = cols(Experiment = col_character(),
+                                    Part = col_double(), # <-- we change this later
+#                                    Obs = col_double(),
+                                    Stimulus = col_character(),
+                                    time = col_double(),
+                                    x = col_double(),
+                                    y = col_double(),
+                                    x_offset = col_double(),
+                                    y_offset = col_double()
+                   )) %>%
+           mutate(File = .x)) %>% 
+  mutate(is_duplicate = lag(x) == x & lag(y) == y) %>% ## Yeta1 seems to duplicate measures. This is a bugfix
+  filter(!is_duplicate) %>% 
+  filter(!str_detect(Stimulus, "dummy")) %>% 
+  mutate(Obs  = row_number()) %>% 
+  mutate(Part = as.factor(as.integer(Part - min(Part)) + 1)) %>% ## reducing the Part identifier
+  group_by(Part) %>% 
+  mutate(time = time - min(time)) %>% # time since start experiment
+  ungroup() %>% 
+  mutate(y = HEIGHT - y, ### reversing the y-axis
+         manipulated = stringr::str_detect(Stimulus, "manipulated"),
+         Face = stringr::str_extract(Stimulus, "[0-9]+"),
+         humlike = as.numeric(Face)) %>% 
+  select(Obs, Part, Stimulus, Face, humlike, manipulated, time, x, y)
+  
+sample_n(UV22_0, 10)
+
+summary(UV22_0, 10)
+```
+
+
+## Reading StimulusInfo and AOI
+
+```{r}
+Stimuli <- 
+  read_csv(str_c(IMG_DIR, "Stimuli.csv"),
+           col_types = cols(File = col_character(),
+                            width = col_double(),
+                            height = col_double(),
+                            humLike = col_double(),
+                            humskull = col_logical(),
+                            whitesclera = col_logical(),
+                            congruency = col_double()
+           )) %>% 
+  rename(Stimulus = File) %>% 
+  mutate(Skull = if_else( humskull, "human", "ape"),
+         Sclera = if_else( whitesclera, "human", "ape"),
+         congruent = (Sclera == Skull))
+
+UV22_1 <- left_join(UV22_0, Stimuli, 
+                    by = "Stimulus") %>% 
+  select(Obs, Part, Stimulus, Face, humlike, Sclera, Skull, congruent, time, x, y)
+
+sample_n(UV22_1, 12)
+```
+
+
+
+```{r}
+AOI <- 
+  read_csv(str_c(IMG_DIR, "AOI.csv", sep = "")) %>% 
+  #right_join(Stimuli, by = "Stimulus") %>% 
+  mutate(Face = str_extract(Stimulus, "[0-9]+"),
+         Path = str_c(IMG_DIR, Stimulus, sep = ""),
+         #Image = map(Path, ~jpeg::readJPEG(.x)),
+         xmin = x, 
+         xmax = x + w,
+         ymax = HEIGHT - y, ## reversing the y coordinates
+         ymin = HEIGHT - (y + h)) %>% 
+  arrange(Face, AOI) %>% 
+  select(Face, AOI, xmin, xmax, ymin, ymax, Path)
+
+head(AOI)
+```
+
+## Data preparation
+
+-   measuring distance and duration
+-   vertical mirroring off coordinates
+-   extracting variables from file names
+-   shortening some variables
+
+```{r}
+UV22_2 <- 
+  UV22_1 %>% 
+  mutate(Sequence = as.factor(str_c(Part, Stimulus, sep = "_"))) %>% 
+  group_by(Sequence) %>% 
+  mutate(distance = sqrt((x - lag(x))^2 + ## Euclidian distance
+                           (y - lag(y))^2),
+         duration = lead(time) - time) %>% ## duration
+  ungroup() %>% 
+  select(Obs, Part, Stimulus, Face, Sequence, humlike, Sclera, Skull, congruent, time, x, y, distance, duration) %>% 
+  filter(Face != "dummy")
+
+sample_n(UV22_2, 10)
+
+summary(UV22_2)
+```
+
+# Visualization
+
+## Grid of Stimuli
+
+We create a re-usable ggplot object G_0 containing a grid of pictures
+
+```{r, fig.height = 8, fig.width = 8}
+G_0 <-
+  AOI %>% 
+  ggplot(aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax)) +
+  facet_wrap(~Face) +
+  ggimg::geom_rect_img(aes(img = Path, xmin = 0, xmax = WIDTH, ymin = 0, ymax = HEIGHT)) +
+  xlim(0, WIDTH) +
+  ylim(0, HEIGHT)
+
+G_0
+```
+
+## Raw measures visualization
+
+```{r}
+G_0 +
+  geom_point(aes(x = x, y = y, col = Part),
+             size = .5,
+             alpha = .5,
+             inherit.aes  = F,
+             data = UV22_2)
+```
+
+
+
+## AOI visualization
+
+```{r fig.height = 8, fig.width = 8}
+G_1 <- 
+  G_0 +
+  geom_rect(aes(xmin = xmin, ymin = ymin, 
+                xmax = xmax, ymax = ymax,
+                fill = AOI),
+            alpha = .2, 
+            inherit.aes  = F)
+
+G_1
+```
+
+## AOI Classification
+
+```{r}
+UV22_3 <- 
+  UV22_2 %>% 
+  left_join(AOI, by = "Face") %>% 
+  mutate(is_in = x > xmin & x < xmax & y > ymin & y < ymax) %>% 
+  filter(is_in) %>% 
+  select(Obs, AOI) %>% 
+  right_join(UV22_2, by = "Obs") %>% 
+  mutate(AOI = if_else(is.na(AOI), "Outside", AOI)) %>% 
+  arrange(Part, time)
+
+summary(UV22_3)
+```
+
+```{r}
+UV22_3 %>% 
+  group_by(AOI) %>% 
+  summarize(n())
+
+```
+
+```{r}
+G_0 +
+  geom_point(aes(x = x, y = y, 
+                 col = AOI),
+             size = .5,
+             alpha = .5,
+             inherit.aes  = F,
+             data = UV22_3)
+```
+
+```{r}
+G_0 +
+  geom_count(aes(x = x, y = y, 
+                 col = AOI),
+             alpha = .5,
+             inherit.aes  = F,
+             data = UV22_3)
+```
+
+## Measuring visits
+
+A *visit* is a closed sequence of eye positions in the same region. The following code uses a combined criterion for setting a new visits:
+
+-   the position falls into a different AOI
+-   OR: the distance traveled from the previous position exceeds a certain threshold
+
+
+```{r}
+distance_threshold <- 50
+
+UV22_4 <- 
+  UV22_3 %>%
+  group_by(Part, Stimulus) %>% 
+  filter(AOI != lag(AOI) | distance > distance_threshold) %>% ## logical OR
+  mutate(visit = row_number(),
+         duration = lead(time) - time) %>% 
+  ungroup()
+
+sample_n(UV22_4, 10)
+```
+
+## Plotting visit paths and duration
+
+```{r fig.width=8, fig.height = 8}
+G_3 <- 
+  G_0 +
+  geom_point(aes(x = x, y = y, 
+                 shape = Part,
+                 size = duration), # <--
+             alpha = .5,
+             inherit.aes  = F,
+             data = UV22_4)
+
+G_3
+```
+
+```{r}
+G_4 <- 
+  G_0 +
+  geom_path(aes(x = x, y = y, 
+                col = Part), 
+            inherit.aes  = F,
+            data = UV22_4) # <--
+G_4
+```
+
+## Population-level AOI frequencies
+
+```{r}
+UV22_5 <- 
+  UV22_4 %>%
+  group_by(AOI, congruent) %>% 
+  summarize(n_visits = n(),
+            total_dur = sum(duration, na.rm = TRUE)) %>% 
+  ungroup()
+
+UV22_5
+```
+
+```{r}
+G_5 <-
+  UV22_5 %>% 
+  ggplot(aes(x = AOI, y = n_visits, fill = congruent)) +
+  geom_col()
+
+G_5
+```
+
+## Frequencies per participant
+
+```{r}
+UV22_6 <- 
+  UV22_4 %>%
+  group_by(Part, Face, AOI, congruent, Sclera, Skull) %>%  # <--
+  summarize(n_visits = n(),
+            total_dur = sum(duration, na.rm = TRUE)) %>% 
+  ungroup()
+
+UV22_6
+```
+
+
+```{r}
+G_6 <-
+  UV22_6 %>% 
+  ggplot(aes(x = congruent, y = n_visits, fill = AOI)) +
+  facet_wrap(~Part) +
+  geom_col()
+
+G_6
+```
+
+## Durations per participant
+
+```{r}
+G_7 <-
+  UV22_6 %>% 
+  ggplot(aes(x = AOI, y = total_dur, fill = manipulated)) +
+  facet_wrap(~Part) +
+  geom_col()
+
+G_6
+```
+
+
+```{r}
+save(AOI, UV22_1, UV22_2, UV22_3, UV22_4, UV22_5, UV22_6, file = "UV22.Rda")
+```
+
+# Your analysis
+
+
+```{r}
+load(file = "UV22.Rda")
+```
+
+
+```{r}
+library(rstanarm)
+options(mc.cores = 4)
+library(bayr)
+```
+
+
+## Exploration
+
+
+```{r}
+UV22_4 %>% 
+  group_by(AOI, congruent) %>% 
+  summarize(mean_dur = mean(duration, na.rm = TRUE),
+            sd_dur = sd(duration, na.rm = TRUE))
+```
+
+
+```{r}
+M_1 <- 
+  UV22_4 %>% 
+  stan_glm(duration ~ 1 + AOI + congruent + AOI:congruent, # AOI*congruence
+           data = .,
+           family = Gamma())
+
+```
+
+```{r}
+fixef(M_1)
+```
+
+```{r}
+M_2 <- 
+  UV22_4 %>% 
+  stan_glm(duration ~ 0 + AOI:congruent,
+           data = .)
+
+```
+
+
+```{r}
+fixef(M_2)
+```
+
+```{r}
+T_2 <-
+  fixef(M_2) %>% 
+  mutate(fixef = str_remove_all(fixef, "AOI|congruent")) %>% 
+  separate(fixef, into = c("AOI", "congruence")) %>% 
+  select(AOI, congruence, center, lower, upper)
+
+T_2
+```
+
+```{r}
+T_2 %>% 
+  ggplot(aes(x = AOI, col = congruence, 
+             y = center, ymin = lower, ymax = upper)) +
+  geom_point() +
+  geom_line(aes(group = congruence))
+```
+
+```{r}
+M_3 <- stan_glm(n_visits ~ 1 + congruent, 
+                data = UV22_5,
+                family = neg_binomial_2())
+```
+
+```{r}
+fixef(M_3, mean.func = exp)
+```
+
+```{r}
+M_4 <- stan_glm(n_visits ~ 1 + Sclera * Skull, 
+                data = UV22_6,
+                family = neg_binomial_2())
+```
+
+
+```{r}
+fixef(M_4)
+```
+
+```{r}
+M_5 <- stan_glm(n_visits ~ 0 + Sclera : Skull, 
+                data = UV22_6,
+                family = neg_binomial_2())
+```
+
+
+```{r}
+fixef(M_5, mean.func = exp)
+```
+
+
+
