@@ -1,74 +1,85 @@
 import os
 import numpy as np
 """Numpy for data manipulation"""
+import itertools
 from sklearn import linear_model as lm
 """Using linear models from Sklearn"""
 import pandas as pd
 """Using Pandas data frames"""
 # import csv
 # """Reading and writing CSV files"""
-from time import time
+from time import time, sleep
+import pygame as pg
 from pygame.draw import circle 
 
 # CV
 import cv2 as cv
 """OpenCV computer vision library"""
 
+def main():
+    print("main")
+    pg.init()
+    pg.display.set_mode((800, 800))
+    SCREEN = pg.display.get_surface()
+    Cal = Calib(SCREEN)
+    print(str(Cal.targets))
+    print("active: " + str(Cal.active))
+    Cal.draw()
+    pg.display.update()
+    sleep(2)
+
 class Calib:
     """yeti14 calibration routines"""
-    screen_size = ()
-    rel_positions = ()
-    targets = np.zeros(shape = (2, 0))
-    active_target = int() 
     color = (160, 160, 160)
     active_color = (255, 120, 0)
     radius = 20
     stroke = 10
 
+
     def __init__(self, screen, rel_positions = [0.125, 0.5, 0.875]):
+        """Creates a square calib screen using relative positions"""
         self.screen = screen
+        self.screen_size = np.array(self.screen.get_size())
         self.rel_positions = np.array(rel_positions)
-        points = np.multiply([[self.screen_size[1]], [self.screen_size[0]]], 
-                             rel_positions) # x and y positions
-        points = np.round(points) # round the value to the nearest integer value
-        points = points.astype(int) # make it an integer
-        self.targets = np.empty([1, 2]) # create an array of correct dimensions for the targets
-        for i in range(len(points[1])):
-            values_y = points[0, i] * np.ones([len(points[0]), 1]) # Make a y value array
-            values_x = np.transpose(points[[1], :]) # make a x value array
-            values_x = np.append(values_x, values_y, axis=1) # combine arrays
-            self.targets = np.append(self.targets, values_x, axis=0) # put into the targets array
-            self.targets = np.delete(self.targets, 0, axis=0)
+        x_pos = self.rel_positions * self.screen_size[0]
+        y_pos = self.rel_positions * self.screen_size[1]
+        self.targets = np.array(list(itertools.product(x_pos,y_pos)))
+        self.active = 0
     
     def active_pos(self):
-        return self.targets[:, self.active_target]
+        return self.targets[self.active]
+
+    def reset(self):
+        self.active = 0
+
+    def n(self):
+        return len(self.targets[:,0])
+
+    def remaining(self):
+        return self.n() - self.active - 1 
+
+    def next(self):
+        if self.remaining():
+            this_target = self.targets[self.active]
+            self.active += 1
+            return True, this_target
+        else:
+            return False, None
+
 
     def len(self):
         return len(self.rel_positions)
 
-    def screen_size(self):
-        return self.screen.get_window_size()
-    
-    def draw_target(self, index, active = False):
-        pos = self.targets[:,index]
-        if active:
-            color = self.active_color
-        else:
-            color = self.color
-        circle(self.screen, color, pos, self.radius, self.stroke)
-
-    def draw_calib_screen(self, active_target = None):
-        cnt = 0
+    def draw(self):
+        index = 0
         for target in self.targets:
             pos = list(map(int, target))
-            self.draw_target(pos, active = cnt == active_target)
-            cnt += 1
-            circle(self.screen, self.color, pos, self.radius, self.stroke)
-
-    def draw_quick_screen(self):
-        w, h = self.screen_size()
-        pos = (int(w/2), int(h/2))
-        self.draw_target(active = True)
+            if index == self.active:
+                color = self.active_color
+            else:
+                color = self.color
+            index += 1
+            circle(self.screen, color, pos, self.radius, self.stroke)
 
 
 class YET:
@@ -185,6 +196,10 @@ class YET:
         self.calib_data = np.append(self.calib_data, [new_data], axis = 0)
         return(new_data)
 
+    def reset(self):
+        self.calib_data = np.zeros(shape=(0, 6))
+        del self.model
+
     def train(self):
         """
         Trains the eye tracker
@@ -247,3 +262,4 @@ class YET:
         """
 
         
+#main()

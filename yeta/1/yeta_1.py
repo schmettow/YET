@@ -11,7 +11,7 @@ from Stimulus import Stimulus, StimulusSet
 
 """GLOBAL VARIABLES"""
 
-USB = 0
+USB = 1
 """USB device for YET (typically 1, sometimes 0 or 2)"""
 
 ## Experiment
@@ -114,12 +114,16 @@ def main():
         print(STIM_INFO  + ' not found. CWD: ' + os.getcwd())
         sys.exit()
 
+    ## Calibration screens
+    CAL = yeti14.Calib(SCREEN)
+    print("Calibration screen loaded with " + str(CAL.n()))
+    QCAL = yeti14.Calib(SCREEN, rel_positions=[0.5])
+
 
     ## Initial State
     STATE = "Detect" 
     BACKGR_COL = col_white
     
-
     YET.init_eye_detection(EYECASC)
     print("YET connected: " + str(YET.connected))
 
@@ -151,35 +155,38 @@ def main():
             if STATE == "Detect":
                 if YET.eye_detected:
                     if key_forward:
-                        targets = make_targets(SCREEN_SIZE)
-                        n_targets = len(targets) # How many calibrationpoints are there
-                        active_target = 0
+                        CAL.reset()
                         STATE = "Target"
             elif STATE == "Target":
                 if key_forward:
-                    STATE = "Measure"
+                    YET.update_eye_frame()
+                    YET.update_quad_bright()
+                    YET.record_calib_data(CAL.active_pos())
+                    if CAL.remaining():
+                        CAL.next()
+                        STATE = "Target"
+                    else:
+                        YET.train()
+                        STATE = "Validate"
+                    print(STATE)
                 elif key_back:
                     STATE = "Detect"
             elif STATE == "Validate":
                 if key_forward:
                     STATE = "prepareStimulus"
                 elif key_back:
+                    CAL.reset()
+                    YET.reset()
                     STATE = "Target"
-                    active_target = 0  # reset
-            elif STATE == "Save":
-                if key_forward:
-                    STATE = "Train"
-                if key_return:
-                    STATE = "Save"
-                if key_back:
-                    STATE = "Target"
-                    active_target = 0  # reset
             elif STATE == "Quick":
                 if key_forward:
-                    pos_center = targets[4][0], targets[4][1] ## center target coords ;)
-                    YET.update_offsets(pos_center)
+                    YET.update_offsets(QCAL.active_pos())
                     STATE = "prepareStimulus"
-
+            elif STATE == "Thank You":
+                if key_forward:
+                    YET.release()
+                    pg.quit()
+                    sys.exit()
             if event.type == QUIT:
                 YET.release()
                 pg.quit()
@@ -187,26 +194,7 @@ def main():
 
 
 
-        # Automatic transitionals
-        if STATE == "Measure":
-            targetx, targety = np.array(targets[active_target][0:2])
-            YET.update_eye_frame()
-            YET.update_quad_bright()
-            YET.record_calib_data((targetx, targety)) 
-            
-            if (active_target + 1) < n_targets:
-                active_target = active_target + 1
-                STATE = "Target"
-                print(STATE + str(active_target))
-            else:
-                STATE = "Save"
-                print(STATE)
-
-        if STATE == "Train":
-            YET.train()
-            STATE = "Validate"
-            print(STATE)
-
+        # Automatic transitionals (ATC)
         if STATE == "prepareStimulus":
             ret, this_stim = STIMS.next()
             this_stim.load()
@@ -218,28 +206,13 @@ def main():
             elapsed_time = time.time() - t_stim_started # elapsed time since STATE == "Stimulus" started
             if elapsed_time > SLIDE_TIME: #presented longer then defined: trial is over
                 YET.data.to_csv(RESULT_FILE, index = False) ## auto save results after every slide
-                # this_img_no = this_img_no + 1
                 if STIMS.remaining() > 0:  # if images are left, got to quick cal
                     STATE = "Quick"
                     print(STATE)    
                 else:
-                    t3 = time.time()
                     STATE = "Thank You"
                     print(STATE)
-            
-        # Show thank you screen
-        if STATE == "Thank You":
-            if time.time() - t3 > 3: # after 3 sec
-                STATE = "Exit"
-                print(STATE)
-                YET.data.to_csv(RESULT_FILE, index = False)
-                print("Saved to " + RESULT_FILE)
-                YET.release()
-                pg.quit()
-                sys.exit()
-
-
-
+    
 
         # Presentitionals
         # over-paint previous with background xcolor
@@ -255,13 +228,9 @@ def main():
                 msg = "Trying to detect an eye."
                 draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .85), color=col_green)
             SCREEN.blit(Img, (int(SCREEN_SIZE[0] * .25), int(SCREEN_SIZE[1] * .25)))
-        elif STATE == "Save":
-            msg = "Press Space to continue."
-            draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .45), color=col_green)
-            msg = "Press Backspace to redo the calibration."
-            draw_text(msg, (SCREEN_SIZE[0] * .1, SCREEN_SIZE[1] * .55), color=col_green)
         elif STATE == "Target":
-            draw_target(SCREEN, targets, active_target)
+            CAL.draw()
+            # draw_target(SCREEN, targets, active_target)
             msg = "Follow the orange light and press Space."
             draw_text(msg, (SCREEN_SIZE[0]* .1, SCREEN_SIZE[1] * .75), color=col_green)
         elif STATE == "Validate":
@@ -270,7 +239,8 @@ def main():
             this_stim.show(SCREEN)
             # SCREEN.blit(IMG, (0, 0))
         elif STATE == "Quick":
-            draw_target(SCREEN, targets, active=4)
+            # draw_target(SCREEN, targets, active=4)
+            QCAL.draw()
             msg = "Look at the orange circle and press Space."
             draw_text(msg, (SCREEN_SIZE[0] * .05, SCREEN_SIZE[1] * .75), color=col_green)
         elif STATE == "Thank You":
@@ -281,31 +251,6 @@ def main():
 
     
 
-def make_targets(screen_size, rel_positions = [0.125, 0.5, 0.875]):
-    rel_positions = np.array(rel_positions)
-    points = np.multiply([[screen_size[1]], [screen_size[0]]], rel_positions) # x and y positions
-    points = np.round(points) # round the value to the nearest integer value
-    points = points.astype(int) # make it an integer
-    
-    targets = np.empty([1, 2]) # create an array of correct dimensions for the targets
-    for i in range(len(points[1])):
-        values_y = points[0, i] * np.ones([len(points[0]), 1]) # Make a y value array
-        values_x = np.transpose(points[[1], :]) # make a x value array
-        values_x = np.append(values_x, values_y, axis=1) # combine arrays
-        targets = np.append(targets, values_x, axis=0) # put into the targets array
-    targets = np.delete(targets, 0, axis=0)
-    return targets
-
-def draw_target(screen, targets, active=0):
-    cnt = 0
-    for target in targets:
-        pos = list(map(int, target))
-        color = (160, 160, 160)
-        radius = 20
-        stroke = 10
-        if cnt == active: color = (255, 120, 0)
-        cnt += 1
-        pg.draw.circle(screen, color, pos, radius, stroke)
 
 
 ## Converts a cv framebuffer into Pygame image (surface!)
