@@ -7,27 +7,29 @@ import os
 import time
 import logging as log
 import yeti14
+from Stimulus import Stimulus, StimulusSet
 
-"""Global variables"""
-WD = os.path.dirname(sys.argv[0])
-os.chdir(WD)
-"""Working directory set to location of yeta_1.py"""
+"""GLOBAL VARIABLES"""
 
 USB = 0
 """USB device for YET (typically 1, sometimes 0 or 2)"""
-
-## Meta data of Yeta
-YETA = 1
-YETA_NAME = "Yeta" + str(YETA)
-TITLE = "Yeta 1: Slideshow"
-AUTHOR = "M Schmettow, N Bierhuizen, GOF5(2021)"
-EYECASC = "haarcascade_eye.xml"
 
 ## Experiment
 EXP_ID = "UV22"
 """Identifier for experiment"""
 EXPERIMENTER = "MS"
 """Experimenter ID"""
+SCREEN_W = 800
+SCREEN_H = 800
+"""Screen dimensions"""
+SLIDE_TIME = 0.5
+"""Presentation time per stimulus"""
+
+## Paths and files
+WD = os.path.dirname(sys.argv[0])
+os.chdir(WD)
+"""Working directory set to location of yeta_1.py"""
+
 STIM_PATH = os.path.join(WD, "Stimuli")
 """Directory where stimuli reside"""
 STIM_INFO = os.path.join(STIM_PATH, "Stimuli_short.csv")
@@ -38,11 +40,13 @@ PART_ID = str(int(time.time()))
 """Unique participant identifier by using timestamps"""
 RESULT_FILE = os.path.join(RESULT_DIR, "yeta1_" + EXP_ID + EXPERIMENTER + PART_ID + ".csv")
 """File name for data"""
-SCREEN_W = 1000
-SCREEN_H = 1000
-"""Screen dimensions"""
-SLIDE_TIME = 2
-"""Presentation time per stimulus"""
+
+## Meta data of Yeta
+YETA = 1
+YETA_NAME = "Yeta" + str(YETA)
+TITLE = "Yeta 1: Slideshow"
+AUTHOR = "M Schmettow, N Bierhuizen, GOF5(2021)"
+EYECASC = "haarcascade_eye.xml"
 
 
 import numpy as np
@@ -104,8 +108,8 @@ def main():
 
     # Reading picture infos
     if os.path.isfile(STIM_INFO):
-        IMGS = pd.read_csv(STIM_INFO)
-        print(IMGS)
+        STIMS = StimulusSet(STIM_INFO)
+        print(str(STIMS.n()) + " stimuli loaded")
     else:
         print(STIM_INFO  + ' not found. CWD: ' + os.getcwd())
         sys.exit()
@@ -115,13 +119,6 @@ def main():
     STATE = "Detect" 
     BACKGR_COL = col_white
     
-
-    image_files = IMGS["File"]
-    n_images = len(image_files)
-    this_img_no = 0
-    this_image = image_files[this_img_no]
-    this_path = os.path.join(STIM_PATH, this_image)   
-    print("Setup finished")
 
     YET.init_eye_detection(EYECASC)
     print("YET connected: " + str(YET.connected))
@@ -141,7 +138,8 @@ def main():
             YET.update_eye_pos()
 
         if STATE == "Stimulus":
-            YET.record(EXP_ID + EXPERIMENTER, PART_ID, this_image)
+            # YET.record(EXP_ID + EXPERIMENTER, PART_ID, this_image)
+            YET.record(EXP_ID + EXPERIMENTER, PART_ID, this_stim.file)
 
         ## EVENT HANDLING
         for event in pg.event.get():
@@ -164,7 +162,7 @@ def main():
                     STATE = "Detect"
             elif STATE == "Validate":
                 if key_forward:
-                    STATE = "prepareImage"
+                    STATE = "prepareStimulus"
                 elif key_back:
                     STATE = "Target"
                     active_target = 0  # reset
@@ -180,17 +178,12 @@ def main():
                 if key_forward:
                     pos_center = targets[4][0], targets[4][1] ## center target coords ;)
                     YET.update_offsets(pos_center)
-                    STATE = "prepareImage"
+                    STATE = "prepareStimulus"
 
             if event.type == QUIT:
                 YET.release()
                 pg.quit()
                 sys.exit()
-
-
-
-
-
 
 
 
@@ -214,22 +207,19 @@ def main():
             STATE = "Validate"
             print(STATE)
 
-        if STATE == "prepareImage":
-            this_image = image_files[this_img_no]
-            this_path = os.path.join(STIM_PATH, this_image)
-            print("Reading Image " + this_path)
-            IMG = pg.image.load(this_path)
-            YET.scale_image = (SCREEN_W/IMG.get_width(), SCREEN_H/IMG.get_height())
-            IMG = pg.transform.smoothscale(IMG, SCREEN_SIZE)
-            t_image_started = time.time()
-            STATE = "Stimulus"
+        if STATE == "prepareStimulus":
+            ret, this_stim = STIMS.next()
+            this_stim.load()
+            if ret:
+                STATE = "Stimulus"
+                t_stim_started = time.time()
             
         if STATE == "Stimulus":
-            elapsed_time = time.time() - t_image_started # elapsed time since STATE == "Stimulus" started
+            elapsed_time = time.time() - t_stim_started # elapsed time since STATE == "Stimulus" started
             if elapsed_time > SLIDE_TIME: #presented longer then defined: trial is over
                 YET.data.to_csv(RESULT_FILE, index = False) ## auto save results after every slide
-                this_img_no = this_img_no + 1
-                if this_img_no < n_images: # if images are left, got to quick cal
+                # this_img_no = this_img_no + 1
+                if STIMS.remaining() > 0:  # if images are left, got to quick cal
                     STATE = "Quick"
                     print(STATE)    
                 else:
@@ -277,7 +267,8 @@ def main():
         elif STATE == "Validate":
             draw_validate(YET.eye_pos)
         elif STATE == "Stimulus":
-            SCREEN.blit(IMG, (0, 0))
+            this_stim.show(SCREEN)
+            # SCREEN.blit(IMG, (0, 0))
         elif STATE == "Quick":
             draw_target(SCREEN, targets, active=4)
             msg = "Look at the orange circle and press Space."
