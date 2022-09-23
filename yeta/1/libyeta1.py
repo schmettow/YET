@@ -1,94 +1,37 @@
 import sys
 import os
 import time
+import numpy as np
 import pandas as pd
 import pygame as pg
 import logging as log
 
-def setup():
-    """
-    Creates global variables for Yeta_1 and changes the working directory
-    """
-    global WD, STIM_DIR, STIM_INFO
-    global RESULT_DIR, PART_ID, RESULT_FILE
-    global EYECASC
-    global col_black, col_green, col_white
-    global YETA, YETA_NAME
-    global EXP_ID, SURF_SIZE
-
-    ## Paths and files
-    WD = os.path.dirname(sys.argv[0])
-    os.chdir(WD)
-    """Working directory set to location of yeta_1.py"""
-
-    STIM_DIR = os.path.join(WD, "Stimuli")
-    """Directory where stimuli reside"""
-    STIM_INFO = os.path.join(STIM_DIR, "Stimuli_short.csv")
-    """CSV file describing stimuli"""
-    RESULT_DIR = "Data"
-    """Directory where results are written"""
-    PART_ID = str(int(time.time()))
-    """Unique participant identifier by using timestamps"""
-    RESULT_FILE = os.path.join(RESULT_DIR, YETA_NAME + "_" + EXP_ID + EXPERIMENTER + PART_ID + ".csv")
-    """File name for data"""
-    EYECASC = "haarcascade_eye.xml"
-
-    ## Meta data of Yeta
-    YETA = 1
-    YETA_NAME = "Yeta" + str(YETA)
-
-    ##### Logging #####
-    log.basicConfig(filename='YET.log', level=log.INFO)
-
-    # Colour definitions
-    col_black = (0, 0, 0)
-    col_green = (0, 255, 0)
-    col_white = (255, 255, 255)
-
-def init_pygame():
-    # Pygame init
-    pg.init()
-    global FONT 
-    global Font
-    global font
-    global SURF
-    
-    FONT = pg.font.Font('freesansbold.ttf', int(20 * min(SURF_SIZE) / 800))
-    Font = pg.font.Font('freesansbold.ttf', int(15 * min(SURF_SIZE) / 800))
-    font = pg.font.Font('freesansbold.ttf', int(12 * min(SURF_SIZE) / 800))
-    pg.display.set_mode(SURF_SIZE)
-    pg.display.set_caption(YETA_NAME)
-    SURF = pg.display.get_surface()
-
-
-
 
 class Stimulus:
-  width = 800
-  height = 800
   stim_dir = "Stimuli/"
-  screen_size = (800, 800)
 
-  def __init__(self):
-    self.file = str()
-    self.path = str()
-
-  def __init__(self, row):
-    row = row.to_dict()
-    self.width = row["width"]
-    self.height = row["height"]
-    self.file = row["File"]
+  def __init__(self, entry):
+    if isinstance(entry, pd.DataFrame):
+        entry = entry.to_dict()
+    self.file = entry["File"]
     self.path = os.path.join(self.stim_dir,  self.file)
+    self.size = np.array((entry["width"], entry["height"]))
     
-  def load(self):
-    try:
-      image = pg.image.load(self.path)
-    except:
-      print("File at " + str(self.path)) + " could not be loaded."
-    self.image = pg.transform.smoothscale(image, self.screen_size)
-    
-  def show(self, screen):
-    screen.blit(self.image, (0, 0))
+  def load(self, surface: pg.Surface, scale = True):
+    image = pg.image.load(self.path)
+    self.surface = surface
+    self.surf_size = np.array(self.surface.get_size())
+    if scale:
+        self.scale = min(self.surf_size / self.size)
+        scale_to = np.array(self.size * self.scale).astype(int)
+        self.image = pg.transform.smoothscale(image, scale_to)    
+        self.size = self.image.get_size()
+    else:
+        self.scale = 1
+    self.pos = np.array((self.surf_size - self.size)/2).astype(int)
+
+  def draw(self):
+    self.surface.blit(self.image, self.pos)
 
 
 class StimulusSet:
@@ -120,8 +63,17 @@ class StimulusSet:
   def pop(self):
     return self.Stimuli.pop()
 
-def main():
-  setup()
-  STIMS = StimulusSet(STIM_INFO)
-  for stim in STIMS.Stimuli:
-    print(stim.path)
+def draw_text(text: str, Surf: pg.Surface, rel_pos: tuple, Font: pg.font.Font, 
+              color=(0, 0, 0), center=False):
+    surf_size = Surf.get_size()
+    x, y = np.array(rel_pos) * np.array(surf_size)
+    rendered_text = Font.render(text, True, color)
+    # retrieving the abstract rectangle of the text box
+    box = rendered_text.get_rect()
+    # this sets the x and why coordinates
+    if center:
+        box.center = (x, y)
+    else:
+        box.topleft = (x, y)
+    # This puts the pre-rendered object on the surface
+    Surf.blit(rendered_text, box)
