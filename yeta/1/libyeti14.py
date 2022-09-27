@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from numpy import array as ary
 """Numpy for data manipulation"""
 import itertools
 from sklearn import linear_model as lm
@@ -12,6 +13,7 @@ from time import time, sleep
 import pygame as pg
 from pygame.draw import circle
 import logging as log
+# from multipledispatch import dispatch
 
 # CV
 import cv2 as cv
@@ -29,85 +31,75 @@ def main():
     pg.display.update()
     sleep(2)
 
-class Calib:
-    """yeti14 calibration"""
-    color = (160, 160, 160)
-    active_color = (255, 120, 0)
-    radius = 20
-    stroke = 10
 
 
-    """
-    Creates a square calib surface using relative positions
-    ...
+class Stimulus:
+  stim_dir = "Stimuli/"
 
-    Attributes
-    ----------
-    surface : pygame.Surface
-        a Pygame surface object for drawing
-    rel_positions : tuple[int]
-        relative target positions used for creating a square calibration surface
-    targets : numpy.array
-        actual target positions (x,y)
-    active : int
-        index of the active targets
-
-    Methods
-    -------
-    active_pos()
-        returns the coordinates of the active targets
-    reset()
-        resets the active position to 0
-    n()
-        returns the number of targets to
-    remaining()
-        returns the number of remaining targets
-    next()
-        advances active position by 1
-    draw()
-        draws the calibration surface
+  def __init__(self, entry):
+    if isinstance(entry, pd.DataFrame):
+        entry = entry.to_dict()
+    self.file = entry["File"]
+    self.path = os.path.join(self.stim_dir,  self.file)
+    self.size = ary((entry["width"], entry["height"]))
     
-    """
+  def load(self, surface: pg.Surface, scale = True):
+    image = pg.image.load(self.path)
+    self.surface = surface
+    self.surf_size = ary(self.surface.get_size())
+    if scale:
+        self.scale = min(self.surf_size / self.size)
+        scale_to = ary(self.size * self.scale).astype(int)
+        self.image = pg.transform.smoothscale(image, scale_to)    
+        self.size = self.image.get_size()
+    else:
+        self.scale = 1
+    self.pos = ary((self.surf_size - self.size)/2).astype(int)
 
-    def __init__(self, surface, rel_positions = (0.125, 0.5, 0.875)):
-        self.surface = surface
-        self.surface_size = np.array(self.surface.get_size())
-        self.rel_positions = np.array(rel_positions)
-        x_pos = self.rel_positions * self.surface_size[0]
-        y_pos = self.rel_positions * self.surface_size[1]
-        self.targets = np.array(list(itertools.product(x_pos,y_pos)))
-        self.active = 0
-    
-    def active_pos(self):
-        return self.targets[self.active]
+  def draw(self):
+    self.surface.blit(self.image, self.pos)
 
-    def reset(self):
-        self.active = 0
 
-    def n(self):
-        return len(self.targets[:,0])
+class StimulusSet:
+  def __init__(self, path):
+    self.table = pd.read_csv(path)
+    self.Stimuli = []
+    for index, row in self.table.iterrows():
+        this_stim = Stimulus(row)
+        self.Stimuli.append(this_stim)
+    self.active = 0
 
-    def remaining(self):
-        return self.n() - self.active - 1 
+  def n(self):
+    return len(self.Stimuli)
 
-    def next(self):
-        if self.remaining():
-            this_target = self.targets[self.active]
-            self.active += 1
-            return True, this_target
-        else:
-            return False, None
+  def remaining(self):
+    return len(self.Stimuli) - self.active
 
-    def draw(self):
-        index = 0
-        for target in self.targets:
-            pos = list(map(int, target))
-            if index == self.active:
-                color = self.active_color
-            else:
-                color = self.color
-            index += 1
-            circle(self.surface, color, pos, self.radius, self.stroke)
+  def next(self):
+    if self.active < len(self.Stimuli):
+      this_stim = self.Stimuli[self.active]
+      self.active += 1
+      return True, this_stim
+    else:
+      return False, None
+
+  def reset(self):
+    self.active = 0
+  
+  def pop(self):
+    return self.Stimuli.pop()
+
+
+        
+def frame_to_surf(frame, dim):
+    img = cv.cvtColor(frame, cv.COLOR_BGR2RGB)  # convert BGR (cv) to RGB (Pygame)
+    img = np.rot90(img)  # rotate coordinate system
+    surf = pg.surfarray.make_surface(img)
+    surf = pg.transform.smoothscale(surf, dim)
+    return surf
+
+
+
 
 
 
@@ -136,7 +128,7 @@ class YET:
     
     surface : pygame.Surface
         a Pygame surface object for drawing
-    rel_positions : tuple[int]
+    pro_positions : tuple[int]
         relative target positions used for creating a square calibration surface
     targets : numpy.array
         actual target positions (x,y)
@@ -165,21 +157,19 @@ class YET:
         resets calibration data, offsets and data
     """
     
-    frame = []
+    frame = None
     new_frame = False
     connected = False
     cascade = False
     eye_detection = False
     eye_detected = False
     eye_frame_coords = (0,0,0,0) # make array
-    eye_frame = False
+    eye_frame = []
     quad_bright = (0,0,0,0) # make array
-    eye_pos_raw = (0, 0)
     offsets = (0,0) # make array
-    scale_image = (1,1)
-    eye_pos = (0, 0)
+    data_cols = ("Exp","Part", "Stim", "time", "x", "y", "x_pro", "y_pro") 
 
-    def __init__(self, usb):
+    def __init__(self, usb: int, surface: pg.Surface) -> None:
         """
         YET constructor
 
@@ -188,6 +178,8 @@ class YET:
         """
         self.connected = False
         self.usb = usb
+        self.surface = surface
+        self.surf_size = self.surface.get_size()
         try:
             self.device = cv.VideoCapture(self.usb)
             self.connected = True
@@ -199,16 +191,17 @@ class YET:
             self.frame_size = (int(self.device.get(cv.CAP_PROP_FRAME_WIDTH)),
                                int(self.device.get(cv.CAP_PROP_FRAME_HEIGHT)))
             self.calib_data = np.zeros(shape=(0, 6))
-            self.data = pd.DataFrame(columns = ("Experiment","Part", "Stimulus", "time", "x", "y", "x_offset", "y_offset") , 
+            self.data = pd.DataFrame(columns = YET.data_cols,
                        dtype = "float64")
-            self.data["Experiment"].astype("category")
+            self.data["Exp"].astype("category")
             self.data["Part"].astype("category")
-            self.data["Stimulus"].astype("category")
+            self.data["Stim"].astype("category")
+            self.update_frame()
 
     def release(self):
         self.device.release()
 
-    def init_eye_detection(self, cascade_file):
+    def init_eye_detection(self, cascade_file: str):
         """
         Initialize eye detection
 
@@ -218,32 +211,34 @@ class YET:
         self.cascade = cv.CascadeClassifier(cascade_file)
         self.eye_detection = True
 
-    def update_frame(self):
+    def update_frame(self) -> np.ndarray:
         """
         Update the eye frame based on eye detection
         """
-        self.new_frame, self.frame = self.device.read()
+        new_frame, frame = self.device.read()
+        if new_frame and not np.sum(frame) == 0:
+            self.new_frame = True
+            self.frame = frame
         return(self.new_frame)
 
-    def detect_eye(self):
+    def detect_eye(self) -> tuple:
         """
         Updates the position and size of the eye frame
         """
+        self.eye_detected = False
         if self.new_frame:
             Eyes = self.cascade.detectMultiScale(
                 self.frame,
                 scaleFactor=1.1,
                 minNeighbors=5,
-                minSize=(20, 20)) ## <-- parametrize me
-            if len(Eyes) > 0:
+                minSize=(50, 50)) ## <-- parametrize me
+            if len(Eyes) == 1:
                 self.eye_detected = True
                 self.eye_frame_coords = Eyes[0]
-            else:
-                self.eye_detected = False
-        return(self.eye_detected, self.eye_frame_coords)
+        return(self.eye_detected)
 
     
-    def update_eye_frame(self):
+    def update_eye_frame(self) -> np.ndarray:
         """
         Trims the frame obtained by eye detection
         """
@@ -253,7 +248,7 @@ class YET:
             self.eye_frame = cv.cvtColor(self.eye_frame, cv.COLOR_BGR2GRAY)
         return(self.eye_frame)
     
-    def update_quad_bright(self):
+    def update_quad_bright(self) -> tuple:
         """
         Updating the quadrant brightness vector
         """
@@ -266,21 +261,19 @@ class YET:
             self.quad_bright = (b_NW, b_NE, b_SW, b_SE)
         return(self.quad_bright)
     
-    def record_calib_data(self, target_pos):
+    def record_calib_data(self, target_pos: tuple) -> ary:
         """
         Record the present quad brightness for training the model
 
         :param target_pos (x, y) position of calibration target
         """
-        new_data = np.append(self.quad_bright, np.array(target_pos))
+        new_data = np.append(self.quad_bright, ary(target_pos))
         self.calib_data = np.append(self.calib_data, [new_data], axis = 0)
         return(new_data)
 
-    def train(self):
+    def train(self) -> lm.LinearRegression:
         """
         Trains the eye tracker
-
-        :param data is a 6 (4 + 2) column array
         """
         Quad = self.calib_data[:, 0:4]
         Pos = self.calib_data[:, 4:6]
@@ -289,78 +282,167 @@ class YET:
         self.model = model
         return(self.model)
 
-    def update_offsets(self, target_pos):
+    def update_offsets(self, target_pos: tuple) -> tuple:
         """
         Updates the offset values based on current eye_pos and a given target position
 
         param target_pos = position of visual target
         """
-        self.offsets = [target_pos[0] - self.eye_pos_raw[0], 
-                        target_pos[1] - self.eye_pos_raw[1]]
+        self.offsets = (target_pos[0] - self.eye_raw[0], 
+                        target_pos[1] - self.eye_raw[1])
         return(self.offsets)
 
-    
-    
-    def update_eye_pos(self):
+    def update_eye_pos(self) -> tuple:
         """
         Predicts the eye coordinates
 
         """        
-        quad = np.array(self.quad_bright)
+        quad = ary(self.quad_bright)
         quad.shape = (1, 4)
         x, y = self.model.predict(quad)[0, :]
-        self.eye_pos_raw = (x, y)
+        self.eye_raw = (x, y)
         self.eye_pos = (x + self.offsets[0], y + self.offsets[1])
-        return([self.eye_pos_raw, self.eye_pos])
+        self.eye_pro = ary(self.eye_pos)/ary(self.surf_size)
+        return self.eye_pos
 
-    def record(self, Exp_ID, Part_ID, Stim_ID):
+
+    def update_stim_pos(self, Stim: Stimulus) -> tuple:
+        """
+        Returns the position relative to the stimulus
+        """
+        offsets = ary(Stim.pos)
+        scale = Stim.scale
+        self.stim_pos = tuple((ary(self.eye_pos) - offsets)/scale)
+        self.stim_pro = ary(self.stim_pos)/ary(Stim.size)
+        return self.stim_pos
+
+
+
+    def record(self, Exp_ID: str, Part_ID: str, Stim_ID: str) -> pd.DataFrame:
         """
         Records the eye coordinates
 
-        """
-        new_data = pd.DataFrame({"Experiment": Exp_ID, 
+        """       
+        
+        new_data = pd.DataFrame({"Exp": Exp_ID,
                                     "Part": Part_ID,
-                                    "Stimulus": Stim_ID, 
+                                    "Stim": Stim_ID, 
                                     "time" : time(),
-                                    "x": self.eye_pos[0]/self.scale_image[0], 
-                                    "y": self.eye_pos[1]/self.scale_image[1],
-                                    "x_offset": self.offsets[0], 
-                                    "y_offset": self.offsets[1]}, 
+                                    "x": self.stim_pos[0], 
+                                    "y": self.stim_pos[1]}, 
                                   index = [0])
+        new_data["x_pro"] = self.stim_pro[0]
+        new_data["y_pro"] = self.stim_pro[1]
+    
         self.data = pd.concat([self.data, new_data])
         return(new_data)
 
-    def reset_calib(self):
-        self.calib_data = np.zeros(shape=(0, 6))
-        del self.model
 
-    def reset_offsets(self):
+    def reset_calib(self) -> None:
+        self.calib_data = np.zeros(shape=(0, 6))
+        if hasattr(self, "model"):
+            del self.model
+
+    def reset_offsets(self) -> None:
         self.offsets = (0,0)
 
-    def reset_data(self):
-        self.data = pd.DataFrame(columns = ("Experiment","Part", "Stimulus", "time", "x", "y", "x_offset", "y_offset") , 
+    def reset_data(self) -> None:
+        self.data = pd.DataFrame(columns = YET.data_cols , 
                        dtype = "float64")
 
-    def reset(self):
+    def reset(self) -> None:
         self.reset_calib()
         self.reset_data()
 
-    def draw_follow(self, surface):
-        
+    def draw_follow(self, surface: pg.Surface) -> None:
         """
         Draws a circle to the current eye position
 
         Note that eye positions must be updated using the update methods
-        """
-        
+        """        
         circle(surface, (120, 120, 0),  self.eye_pos, 12, 3)
 
-        
-        
-def frame_to_surf(frame, dim):
-    img = cv.cvtColor(frame, cv.COLOR_BGR2RGB)  # convert BGR (cv) to RGB (Pygame)
-    img = np.rot90(img)  # rotate coordinate system
-    surf = pg.surfarray.make_surface(img)
-    surf = pg.transform.smoothscale(surf, dim)
-    return surf
+
+class Calib:
+    """yeti14 calibration"""
+    color = (160, 160, 160)
+    active_color = (255, 120, 0)
+    radius = 20
+    stroke = 10
+
+
+    """
+    Creates a square calib surface using relative positions
+    ...
+
+    Attributes
+    ----------
+    surface : pygame.Surface
+        a Pygame surface object for drawing
+    pro_positions : tuple[int]
+        relative target positions used for creating a square calibration surface
+    targets : numpy.array
+        actual target positions (x,y)
+    active : int
+        index of the active targets
+
+    Methods
+    -------
+    active_pos()
+        returns the coordinates of the active targets
+    reset()
+        resets the active position to 0
+    n()
+        returns the number of targets to
+    remaining()
+        returns the number of remaining targets
+    next()
+        advances active position by 1
+    draw()
+        draws the calibration surface
+    
+    """
+
+    def __init__(self, surface: pg.Surface, 
+                 pro_positions = (0.125, 0.5, 0.875)) -> None:
+        self.surface = surface
+        self.surface_size = ary(self.surface.get_size())
+        self.pro_positions = ary(pro_positions)
+        x_pos = self.pro_positions * self.surface_size[0]
+        y_pos = self.pro_positions * self.surface_size[1]
+        self.targets = ary(list(itertools.product(x_pos,y_pos)))
+        self.active = 0
+    
+    def active_pos(self) -> int:
+        return self.targets[self.active]
+
+    def reset(self) -> None:
+        self.active = 0
+
+    def n(self) -> int:
+        return len(self.targets[:,0])
+
+    def remaining(self) -> int:
+        return self.n() - self.active - 1 
+
+    def next(self) -> tuple:
+        if self.remaining():
+            this_target = self.targets[self.active]
+            self.active += 1
+            return True, this_target
+        else:
+            return False, None
+
+    def draw(self) -> None:
+        index = 0
+        for target in self.targets:
+            pos = list(map(int, target))
+            if index == self.active:
+                color = self.active_color
+            else:
+                color = self.color
+            index += 1
+            circle(self.surface, color, pos, self.radius, self.stroke)
+
+
 
