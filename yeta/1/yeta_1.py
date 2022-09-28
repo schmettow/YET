@@ -9,7 +9,7 @@ EXP_ID = "UV22"
 """Identifier for experiment"""
 EXPERIMENTER = "MS"
 """Experimenter ID"""
-SURF_SIZE = (1600, 1200)
+SURF_SIZE = (1000, 1000)
 """Screen dimensions"""
 SLIDE_TIME = 4
 """Presentation time per stimulus"""
@@ -129,15 +129,17 @@ def main():
             if elapsed_time > SLIDE_TIME: #presented longer then defined: trial is over
                 Yet.data.to_csv(RESULT_FILE, index = False) ## auto save results after every slide
                 if STIMS.remaining() > 0:  # if images are left, got to quick cal
+                    Yet.reset_offsets()
                     STATE = "Quick"
+                    # STATE = "prepareStimulus"
                     log.info(STATE)    
                 else:
                     STATE = "Thank You"
                     log.info(STATE)
     
 
-               # DATA PROCESSING
-         ## a bit too general
+        # FRAME PROCESSING
+
 
         if STATE == "Detect":
             Yet.update_frame()

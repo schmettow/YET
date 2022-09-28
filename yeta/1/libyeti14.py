@@ -288,9 +288,15 @@ class YET:
 
         param target_pos = position of visual target
         """
-        self.offsets = (target_pos[0] - self.eye_raw[0], 
-                        target_pos[1] - self.eye_raw[1])
+        # O = E - T
+        # T = E - O
+        new_offsets = ary(target_pos) - ary(self.eye_raw) # <---
+        self.offsets = tuple(new_offsets)
         return(self.offsets)
+
+    def reset_offsets(self) -> None:
+        self.offsets = (0,0)
+
 
     def update_eye_pos(self) -> tuple:
         """
@@ -299,10 +305,10 @@ class YET:
         """        
         quad = ary(self.quad_bright)
         quad.shape = (1, 4)
-        x, y = self.model.predict(quad)[0, :]
-        self.eye_raw = (x, y)
-        self.eye_pos = (x + self.offsets[0], y + self.offsets[1])
-        self.eye_pro = ary(self.eye_pos)/ary(self.surf_size)
+        self.eye_raw = tuple(self.model.predict(quad)[0, :])
+        # self.eye_pos = (x - self.offsets[0], y - self.offsets[1])
+        self.eye_pos = tuple(ary(self.eye_raw) - ary(self.offsets))
+        self.eye_pro = tuple(ary(self.eye_pos)/ary(self.surf_size))
         return self.eye_pos
 
 
@@ -311,9 +317,9 @@ class YET:
         Returns the position relative to the stimulus
         """
         offsets = ary(Stim.pos)
-        scale = Stim.scale
+        scale = ary(Stim.scale)
         self.stim_pos = tuple((ary(self.eye_pos) - offsets)/scale)
-        self.stim_pro = ary(self.stim_pos)/ary(Stim.size)
+        self.stim_pro = tuple(ary(self.stim_pos)/ary(Stim.size))
         return self.stim_pos
 
 
@@ -343,9 +349,7 @@ class YET:
         if hasattr(self, "model"):
             del self.model
 
-    def reset_offsets(self) -> None:
-        self.offsets = (0,0)
-
+    
     def reset_data(self) -> None:
         self.data = pd.DataFrame(columns = YET.data_cols , 
                        dtype = "float64")
@@ -360,7 +364,7 @@ class YET:
 
         Note that eye positions must be updated using the update methods
         """        
-        circle(surface, (120, 120, 0),  self.eye_pos, 12, 3)
+        circle(surface, (160, 160, 0),  self.eye_pos, 12, 3)
 
 
 class Calib:
