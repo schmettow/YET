@@ -2,6 +2,13 @@
 ## Input: Images and Stimuli.csv file
 ## Results = table with Part, Stimulus, time, eye tracking coordinates
 
+import sys
+import os
+import time
+import logging as log
+import pygame as pg
+from pygame.locals import *
+
 ## Basic configuration
 USB = 1
 """USB camera device number for YET (typically 1, sometimes 0 or 2)"""
@@ -9,17 +16,13 @@ EXP_ID = "UV22"
 """Identifier for experiment"""
 EXPERIMENTER = "MS"
 """Experimenter ID"""
-SURF_SIZE = (1000, 1000)
+SURF_SIZE = (900, 900)
 """Screen dimensions"""
 SLIDE_TIME = 4
 """Presentation time per stimulus"""
+#STIM_INFO = os.path.join("Stimuli", "Stimuli_short.csv")
+"""Stimuli table over-ride"""
 
-import sys
-import os
-import time
-import logging as log
-import pygame as pg
-from pygame.locals import *
 # own classes
 import libyeti14 as yeti14
 import libyeta1 as yeta1
@@ -27,6 +30,7 @@ import libyeta1 as yeta1
 def main():
 
     """GLOBAL VARIABLES"""
+    global BACKGR_COL
     
     # Connecting YET
     Yet = yeti14.YET(USB, SURF)
@@ -100,7 +104,7 @@ def main():
             elif STATE == "Quick":
                 if key_forward:
                     Yet.update_offsets(QCal.active_pos())
-                    STATE = "prepareStimulus"
+                    STATE = "Stimulus"
             elif STATE == "Thank You":
                 if key_forward:
                     Yet.release()
@@ -118,7 +122,9 @@ def main():
             ret, Stim = STIMS.next()
             Stim.load(SURF)
             if ret:
-                STATE = "Stimulus"
+                # this_bright = Stim.average_brightness()
+                # BACKGR_COL = (this_bright, this_bright, this_bright)
+                STATE = "Quick"
                 t_stim_started = time.time()
             else:
                 log.error("Could not load next Stimulus")
@@ -130,7 +136,7 @@ def main():
                 Yet.data.to_csv(RESULT_FILE, index = False) ## auto save results after every slide
                 if STIMS.remaining() > 0:  # if images are left, got to quick cal
                     Yet.reset_offsets()
-                    STATE = "Quick"
+                    STATE = "prepareStimulus"
                     # STATE = "prepareStimulus"
                     log.info(STATE)    
                 else:
@@ -158,7 +164,8 @@ def main():
             Yet.update_eye_frame()
             Yet.update_quad_bright()
             Yet.update_eye_pos()
-            Yet.update_stim_pos(Stim)
+            Yet.eye_pro = (0,0)
+            Yet.update_eye_stim(Stim)
             Yet.record(EXP_ID + EXPERIMENTER, PART_ID, Stim.file)
 
         # Presentitionals
@@ -184,6 +191,7 @@ def main():
             Stim.draw()
             Yet.draw_follow(SURF)
         elif STATE == "Quick":
+            Stim.draw(blur = 200)
             QCal.draw()
             Yet.draw_follow(SURF)
             yeta1.draw_text("Look at the orange circle and press Space.", SURF, (.05, .75), Font)
