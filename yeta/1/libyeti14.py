@@ -133,7 +133,7 @@ def frame_to_surf(frame, dim):
 
 
 
-class YET:
+class YETI:
     """
     Class for using a USB camera as an eye tracking device
     ...
@@ -200,7 +200,7 @@ class YET:
 
     def __init__(self, usb: int, surface: pg.Surface) -> None:
         """
-        YET constructor
+        YETI constructor
 
         :param usb USB port, usually 1
         :type usb int
@@ -220,7 +220,7 @@ class YET:
             self.frame_size = (int(self.device.get(cv.CAP_PROP_FRAME_WIDTH)),
                                int(self.device.get(cv.CAP_PROP_FRAME_HEIGHT)))
             self.calib_data = np.zeros(shape=(0, 6))
-            self.data = pd.DataFrame(columns = YET.data_cols,
+            self.data = pd.DataFrame(columns = YETI.data_cols,
                        dtype = "float64")
             self.data["Exp"].astype("category")
             self.data["Part"].astype("category")
@@ -381,7 +381,7 @@ class YET:
 
     
     def reset_data(self) -> None:
-        self.data = pd.DataFrame(columns = YET.data_cols , 
+        self.data = pd.DataFrame(columns = YETI.data_cols , 
                        dtype = "float64")
 
     def reset(self) -> None:
