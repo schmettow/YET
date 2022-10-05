@@ -44,6 +44,9 @@ def main():
     if os.path.isfile(STIM_PATH):
         STIMS = yeti14.StimulusSet(STIM_PATH)
         log.info(str(STIMS.n()) + " stimuli loaded")
+        if SHUFFLE:
+            STIMS.shuffle()
+            log.info(" ... shaken, not stirred")
     else:
         log.error(STIM_PATH  + ' not found. CWD: ' + os.getcwd())
         sys.exit()
@@ -292,7 +295,7 @@ def main():
                 draw_text("Trying to detect an eye.", SURF, (.1, .85), FONT)
             SURF.blit(Img, (int(SURF_SIZE[0] * .25), int(SURF_SIZE[1] * .25)))
             """
-            The Detect srceen is dynamic in that it changes when an eye detected,
+            The Detect srceen is dynamic in that it changes when an eye is detected,
             which can change from one Yet frame to the next.
             """
         elif STATE == "Calibration":
@@ -336,9 +339,10 @@ def main():
 
 
 def read_config(path = "Config.csv"):
-    global USB, EXP_ID, EXPERIMENTER
-    global SURF_SIZE, SLIDE_TIME, STIM_FILE
-    global CONFIG 
+    global USB
+    global EXP_ID, EXPERIMENTER
+    global SURF_SIZE, SLIDE_TIME, STIM_FILE, SHUFFLE
+    global CONFIG
 
     CONFIG = dict()
     Tab = pd.read_csv(path)
@@ -350,6 +354,7 @@ def read_config(path = "Config.csv"):
     SURF_SIZE = (int(CONFIG["WIDTH"]), int(CONFIG["HEIGHT"]))
     SLIDE_TIME = float(CONFIG["SLIDE_TIME"])
     STIM_FILE = CONFIG["STIM_FILE"]
+    SHUFFLE = bool(CONFIG["SHUFFLE"])
 
 
 

@@ -1,19 +1,19 @@
-import os
+import os, random
 import numpy as np
 from numpy import array as ary
 """Numpy for data manipulation"""
+
 import itertools
 from sklearn import linear_model as lm
+
 """Using linear models from Sklearn"""
 import pandas as pd
+
 """Using Pandas data frames"""
-# import csv
-# """Reading and writing CSV files"""
 from time import time, sleep
 import pygame as pg
 from pygame.draw import circle
 import logging as log
-# from multipledispatch import dispatch
 
 # CV
 import cv2 as cv
@@ -118,6 +118,9 @@ class StimulusSet:
   def pop(self):
     return self.Stimuli.pop()
 
+  def shuffle(self, reset = True):
+    self.reset()
+    random.shuffle(self.Stimuli) ## very procedural, brrr
 
         
 def frame_to_surf(frame, dim):
@@ -451,9 +454,13 @@ class Calib:
         self.pro_positions = ary(pro_positions)
         x_pos = self.pro_positions * self.surface_size[0]
         y_pos = self.pro_positions * self.surface_size[1]
-        self.targets = ary(list(itertools.product(x_pos,y_pos)))
+        self.targets = ary(list(itertools.product(x_pos,y_pos))) ## No idea how this works
         self.active = 0
     
+    def shuffle(self, reset = True):
+        self.reset()
+        self.targets = np.random.shuffle(self.targets)
+
     def active_pos(self) -> int:
         return self.targets[self.active]
 
