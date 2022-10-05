@@ -31,6 +31,20 @@ def main():
     pg.display.update()
     sleep(2)
 
+def draw_text(text: str, Surf: pg.Surface, rel_pos: tuple, Font: pg.font.Font, 
+              color=(0, 0, 0), center=False):
+    surf_size = Surf.get_size()
+    x, y = np.array(rel_pos) * np.array(surf_size)
+    rendered_text = Font.render(text, True, color)
+    # retrieving the abstract rectangle of the text box
+    box = rendered_text.get_rect()
+    # this sets the x and why coordinates
+    if center:
+        box.center = (x, y)
+    else:
+        box.topleft = (x, y)
+    # This puts the pre-rendered object on the surface
+    Surf.blit(rendered_text, box)
 
 
 class Stimulus:
@@ -57,15 +71,20 @@ class Stimulus:
         self.scale = 1
     self.pos = ary((self.surf_size - self.size)/2).astype(int)
 
-  def draw(self, blur = 0):
-    if blur:
-        img = pg.surfarray.array3d(self.image)
-        img = cv.blur(img, (blur, blur)).astype('uint8')
-        img = pg.surfarray.make_surface(img)
-        self.surface.blit(img, self.pos)
-    else:
-        self.surface.blit(self.image, self.pos)
+  def draw(self):
+    self.surface.blit(self.image, self.pos)
 
+  
+  def draw_preview(self):
+    blur = ary(self.surf_size/4).astype('int') # 10% blur
+    img = pg.surfarray.array3d(self.image)
+    img = cv.blur(img, blur).astype('uint8')
+    # img = cv.cvtColor(img, cv.COLOR_RGB2GRAY)
+    img = pg.surfarray.make_surface(img)
+    self.surface.blit(img, self.pos)
+    
+    
+  
   def average_brightness(self):
     return pg.surfarray.array3d(self.image).mean()
 

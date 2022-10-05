@@ -25,7 +25,7 @@ SLIDE_TIME = 4
 
 # own classes
 import libyeti14 as yeti14
-import libyeta1 as yeta1
+from libyeti14 import draw_text
 
 def main():
 
@@ -105,6 +105,7 @@ def main():
                 if key_forward:
                     Yet.update_offsets(QCal.active_pos())
                     STATE = "Stimulus"
+                    t_stim_started = time.time()
             elif STATE == "Thank You":
                 if key_forward:
                     Yet.release()
@@ -125,7 +126,6 @@ def main():
                 # this_bright = Stim.average_brightness()
                 # BACKGR_COL = (this_bright, this_bright, this_bright)
                 STATE = "Quick"
-                t_stim_started = time.time()
             else:
                 log.error("Could not load next Stimulus")
                 sys.exit()
@@ -145,6 +145,14 @@ def main():
     
 
         # FRAME PROCESSING
+        
+        # Frame processing basically is a data processing stack.
+        # Because the stack depends on the State, that is why Yet 
+        # exposes all processing steps as update functions. An update 
+        # function only needs to be called once when a new frame is processed.
+        # The last value can later be retrieved from the respective attribute.
+        # This saves processing time, but the developer has to know the steps
+        # and apply them correctly.
 
 
         if STATE == "Detect":
@@ -152,14 +160,12 @@ def main():
             Yet.detect_eye()
             if Yet.eye_detected:
                 Yet.update_eye_frame()
-        
-        if STATE == "Validate" or STATE == "Quick":
+        elif STATE == "Validate" or STATE == "Quick":
             Yet.update_frame()
             Yet.update_eye_frame()
             Yet.update_quad_bright()
             Yet.update_eye_pos()
-
-        if STATE == "Stimulus":
+        elif STATE == "Stimulus":
             Yet.update_frame()
             Yet.update_eye_frame()
             Yet.update_quad_bright()
@@ -174,30 +180,30 @@ def main():
         if STATE == "Detect":
             if Yet.eye_detected:
                 Img = yeti14.frame_to_surf(Yet.eye_frame, (int(SURF_SIZE[0] * .5), int(SURF_SIZE[1] * .5)))
-                yeta1.draw_text("Eye detected!", SURF, (.1, .85), FONT, color = col_green)
-                yeta1.draw_text("Space to continue", SURF, (.1, .9), Font)
+                draw_text("Eye detected!", SURF, (.1, .85), FONT, color = col_green)
+                draw_text("Space to continue", SURF, (.1, .9), Font)
             else:
                 Img = yeti14.frame_to_surf(Yet.frame, (int(SURF_SIZE[0] * .5), int(SURF_SIZE[1] * .5)))
-                yeta1.draw_text("Trying to detect an eye.", SURF, (.1, .85), FONT)
+                draw_text("Trying to detect an eye.", SURF, (.1, .85), FONT)
             SURF.blit(Img, (int(SURF_SIZE[0] * .25), int(SURF_SIZE[1] * .25)))
         elif STATE == "Target":
             Cal.draw()
-            yeta1.draw_text("Follow the orange circle and press Space.", SURF, (.1, .9), Font)
+            draw_text("Follow the orange circle and press Space.", SURF, (.1, .9), Font)
         elif STATE == "Validate":
-            yeta1.draw_text("Space: continue", SURF, (.1, .9), Font)
-            yeta1.draw_text("Backspace: redo the calibration.", SURF, (.1, .95), Font)
+            draw_text("Space: continue", SURF, (.1, .9), Font)
+            draw_text("Backspace: redo the calibration.", SURF, (.1, .95), Font)
             Yet.draw_follow(SURF)
         elif STATE == "Stimulus":
             Stim.draw()
             Yet.draw_follow(SURF)
         elif STATE == "Quick":
-            Stim.draw(blur = 200)
+            Stim.draw_preview()
             QCal.draw()
             Yet.draw_follow(SURF)
-            yeta1.draw_text("Look at the orange circle and press Space.", SURF, (.05, .75), Font)
+            draw_text("Look at the orange circle and press Space.", SURF, (.05, .75), Font)
         elif STATE == "Thank You":
-            yeta1.draw_text("Thank you for taking part!", SURF, (.1, .5), FONT)
-            yeta1.draw_text("Press Space to end the program. Data has been saved", SURF, (.1, .8), Font)
+            draw_text("Thank you for taking part!", SURF, (.1, .5), FONT)
+            draw_text("Press Space to end the program. Data has been saved", SURF, (.1, .8), Font)
 
         # update the screen to display the changes you made
         pg.display.update()
