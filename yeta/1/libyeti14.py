@@ -45,6 +45,7 @@ class Stimulus:
     
   def load(self, surface: pg.Surface, scale = True):
     image = pg.image.load(self.path)
+    # image = pg.image.convert()
     self.surface = surface
     self.surf_size = ary(self.surface.get_size())
     if scale:
@@ -56,8 +57,17 @@ class Stimulus:
         self.scale = 1
     self.pos = ary((self.surf_size - self.size)/2).astype(int)
 
-  def draw(self):
-    self.surface.blit(self.image, self.pos)
+  def draw(self, blur = 0):
+    if blur:
+        img = pg.surfarray.array3d(self.image)
+        img = cv.blur(img, (blur, blur)).astype('uint8')
+        img = pg.surfarray.make_surface(img)
+        self.surface.blit(img, self.pos)
+    else:
+        self.surface.blit(self.image, self.pos)
+
+  def average_brightness(self):
+    return pg.surfarray.array3d(self.image).mean()
 
 
 class StimulusSet:
@@ -307,20 +317,21 @@ class YET:
         quad.shape = (1, 4)
         self.eye_raw = tuple(self.model.predict(quad)[0, :])
         # self.eye_pos = (x - self.offsets[0], y - self.offsets[1])
-        self.eye_pos = tuple(ary(self.eye_raw) - ary(self.offsets))
+        self.eye_pos = tuple(ary(self.eye_raw) + ary(self.offsets))
         self.eye_pro = tuple(ary(self.eye_pos)/ary(self.surf_size))
         return self.eye_pos
 
 
-    def update_stim_pos(self, Stim: Stimulus) -> tuple:
+    def update_eye_stim(self, Stim: Stimulus) -> tuple:
         """
         Returns the position relative to the stimulus
         """
         offsets = ary(Stim.pos)
         scale = ary(Stim.scale)
-        self.stim_pos = tuple((ary(self.eye_pos) - offsets)/scale)
-        self.stim_pro = tuple(ary(self.stim_pos)/ary(Stim.size))
-        return self.stim_pos
+        # self.eye_stim = tuple((ary(self.eye_pos) - offsets)/scale)
+        self.eye_stim = tuple((ary(self.eye_pos) - offsets)/scale)
+        self.eye_pro = tuple(ary(self.eye_stim)/ary(Stim.size))
+        return self.eye_stim
 
 
 
@@ -334,11 +345,11 @@ class YET:
                                     "Part": Part_ID,
                                     "Stim": Stim_ID, 
                                     "time" : time(),
-                                    "x": self.stim_pos[0], 
-                                    "y": self.stim_pos[1]}, 
+                                    "x": self.eye_stim[0], 
+                                    "y": self.eye_stim[1]}, 
                                   index = [0])
-        new_data["x_pro"] = self.stim_pro[0]
-        new_data["y_pro"] = self.stim_pro[1]
+        new_data["x_pro"] = self.eye_pro[0]
+        new_data["y_pro"] = self.eye_pro[1]
     
         self.data = pd.concat([self.data, new_data])
         return(new_data)
@@ -358,13 +369,20 @@ class YET:
         self.reset_calib()
         self.reset_data()
 
-    def draw_follow(self, surface: pg.Surface) -> None:
+    def draw_follow(self, surface: pg.Surface, add_raw = False, add_stim = False) -> None:
         """
         Draws a circle to the current eye position
 
         Note that eye positions must be updated using the update methods
-        """        
-        circle(surface, (160, 160, 0),  self.eye_pos, 12, 3)
+        """ 
+        surf_size = ary(surface.get_size())
+        circ_size = int(surf_size.min()/50)
+        circ_stroke = int(surf_size.min()/200)
+        circle(surface, (255, 0, 0),  self.eye_pos, circ_size, circ_stroke)
+        if add_raw:
+            circle(surface, (0, 255, 0),  self.eye_raw, circ_size, circ_stroke)
+        if add_stim:
+            circle(surface, (0, 0, 255),  self.eye_stim, circ_size, circ_stroke)
 
 
 class Calib:
