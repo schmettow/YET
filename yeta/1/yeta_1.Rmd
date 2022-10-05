@@ -1,7 +1,7 @@
 ---
-title: "YETA1: Data preparation and analysis"
+title: "YETA1 Data Analysis"
 author: "M Schmettow"
-date: "27/09/2022"
+date: "05/10/2022"
 output: html_document
 ---
 
@@ -36,7 +36,7 @@ read_yeta1_stim <-
       read_csv(file,
                col_types = col_types) %>% 
       mutate(
-      Path = str_c(stim_dir, Stim, sep = "")
+      Path = str_c(stim_dir, File, sep = "")
       #Image = map(Path, ~jpeg::readJPEG(.x))
       )
     return(stimuli)    
@@ -46,7 +46,7 @@ read_yeta1_stim()
 ```
 
 ```{r}
-my_Stim_col_types <- cols(  Stim = col_character(),
+my_Stim_col_types <- cols(  File = col_character(),
                             width = col_double(),
                             height = col_double(),
                             hum_like = col_double(),
@@ -59,7 +59,8 @@ my_Stim_col_types <- cols(  Stim = col_character(),
 Stimuli <-
   read_yeta1_stim(col_types = my_Stim_col_types) %>% 
       mutate(Skull = if_else( hum_skull, "human", "ape"),
-             Sclera = if_else( hum_eye, "human", "ape"))
+             Sclera = if_else( hum_eye, "human", "ape"),
+             Stim = File)
 
 ```
 
@@ -223,9 +224,9 @@ UV22_2 %>%
   facet_wrap(~Stim)
 ```
 
-## Areas of interest
+### Areas of interest
 
-### Reading AOI
+#### Reading AOI
 
 ```{r}
 read_yeta1_aoi <- 
@@ -254,7 +255,7 @@ AOI <- read_yeta1_aoi(stim_tab = Stimuli)
 head(AOI)
 ```
 
-### AOI preview
+#### AOI preview
 
 ```{r fig.height = 8, fig.width = 8}
 G_1 <- 
@@ -272,7 +273,7 @@ G_1 <-
 G_1
 ```
 
-### AOI Classification
+#### AOI Classification
 
 ```{r}
 UV22_3 <- 
@@ -308,316 +309,116 @@ G_0 +
              data = UV22_3)
 ```
 
-<!-- ## Measuring visits -->
+### Measuring visits
 
-<!-- A *visit* is a closed sequence of eye positions in the same region. The following code uses a combined criterion for setting a new visits: -->
+A *visit* is a closed sequence of eye positions in the same region. The following code uses a combined criterion for setting a new visits:
 
-<!-- -   the position falls into a different AOI -->
+-   the position falls into a different AOI
 
-<!-- -   OR: the travel traveled from the previous position exceeds a certain threshold -->
+-   OR: the travel traveled from the previous position exceeds a certain threshold
 
-<!-- ```{r} -->
+```{r}
 
-<!-- travel_threshold <- 50 -->
+travel_threshold <- 50
 
-<!-- UV22_4 <-  -->
+UV22_4 <-
 
-<!--   UV22_3 %>% -->
+  UV22_3 %>%
 
-<!--   group_by(Part, Stim) %>%  -->
+  group_by(Part, Stim) %>%
 
-<!--   filter(AOI != lag(AOI) | travel > travel_threshold) %>% ## logical OR -->
+  filter(AOI != lag(AOI) | travel > travel_threshold) %>% ## logical OR
 
-<!--   mutate(visit = row_number(), -->
+  mutate(visit = row_number(),
 
-<!--          duration = lead(time) - time) %>%  -->
+         duration = lead(time) - time) %>%
 
-<!--   ungroup() -->
+  ungroup()
 
-<!-- sample_n(UV22_4, 10) -->
+sample_n(UV22_4, 10)
 
-<!-- ``` -->
+```
 
-<!-- ## Plotting visit paths and duration -->
+#### Plotting visit paths and duration
 
-<!-- ```{r fig.width=8, fig.height = 8} -->
+```{r fig.width=8, fig.height = 8}
 
-<!-- G_3 <-  -->
+G_3 <-
 
-<!--   G_0 + -->
+  G_0 +
+  geom_point(aes(x = x, y = y,
+                 size = duration), # <--
+             color = "white",
+             alpha = .2,
+             inherit.aes  = F,
+             data = UV22_4)
 
-<!--   geom_point(aes(x = x, y = y,  -->
+G_3
 
-<!--                  shape = Part, -->
+```
 
-<!--                  size = duration), # <-- -->
+```{r}
 
-<!--              alpha = .5, -->
+G_4 <-
+  G_0 +
+  geom_path(aes(x = x, y = y,
+                col = Part),
+            inherit.aes  = F,
+            data = UV22_4) # <--
 
-<!--              inherit.aes  = F, -->
+G_4
 
-<!--              data = UV22_4) -->
+```
 
-<!-- G_3 -->
 
-<!-- ``` -->
+## Participant-level analysis
 
-<!-- ```{r} -->
+### Frequencies and durations
 
-<!-- G_4 <-  -->
+```{r}
 
-<!--   G_0 + -->
+UV22_6 <-
+  UV22_4 %>%
+  group_by(Part, Face, AOI, Sclera, Skull) %>%  # <--
+  summarize(n_visits = n(),
+            total_dur = sum(duration, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  mutate(congruent = (Sclera == Skull))
 
-<!--   geom_path(aes(x = x, y = y,  -->
 
-<!--                 col = Part),  -->
+UV22_6
 
-<!--             inherit.aes  = F, -->
+```
 
-<!--             data = UV22_4) # <-- -->
+```{r}
 
-<!-- G_4 -->
+G_6 <-
 
-<!-- ``` -->
+  UV22_6 %>%
+  ggplot(aes(x = congruent, y = n_visits, fill = AOI)) +
+  facet_wrap(~Part) +
+  geom_col()
 
-<!-- ## Population-level AOI frequencies -->
+G_6
 
-<!-- ```{r} -->
+```
 
-<!-- UV22_5 <-  -->
 
-<!--   UV22_4 %>% -->
+```{r}
 
-<!--   group_by(AOI, congruent) %>%  -->
+G_7 <-
+  UV22_6 %>%
+  ggplot(aes(x = AOI, y = total_dur, fill = congruent)) +
+  facet_wrap(~Part) +
+  geom_col()
 
-<!--   summarize(n_visits = n(), -->
+G_7
 
-<!--             total_dur = sum(duration, na.rm = TRUE)) %>%  -->
+```
 
-<!--   ungroup() -->
+```{r}
 
-<!-- UV22_5 -->
+save(AOI, UV22_1, UV22_2, UV22_3, UV22_4, UV22_6, file = "UV22.Rda")
 
-<!-- ``` -->
+```
 
-<!-- ```{r} -->
-
-<!-- G_5 <- -->
-
-<!--   UV22_5 %>%  -->
-
-<!--   ggplot(aes(x = AOI, y = n_visits, fill = congruent)) + -->
-
-<!--   geom_col() -->
-
-<!-- G_5 -->
-
-<!-- ``` -->
-
-<!-- ## Frequencies per participant -->
-
-<!-- ```{r} -->
-
-<!-- UV22_6 <-  -->
-
-<!--   UV22_4 %>% -->
-
-<!--   group_by(Part, Face, AOI, congruent, Sclera, Skull) %>%  # <-- -->
-
-<!--   summarize(n_visits = n(), -->
-
-<!--             total_dur = sum(duration, na.rm = TRUE)) %>%  -->
-
-<!--   ungroup() -->
-
-<!-- UV22_6 -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- G_6 <- -->
-
-<!--   UV22_6 %>%  -->
-
-<!--   ggplot(aes(x = congruent, y = n_visits, fill = AOI)) + -->
-
-<!--   facet_wrap(~Part) + -->
-
-<!--   geom_col() -->
-
-<!-- G_6 -->
-
-<!-- ``` -->
-
-<!-- ## Durations per participant -->
-
-<!-- ```{r} -->
-
-<!-- G_7 <- -->
-
-<!--   UV22_6 %>%  -->
-
-<!--   ggplot(aes(x = AOI, y = total_dur, fill = manipulated)) + -->
-
-<!--   facet_wrap(~Part) + -->
-
-<!--   geom_col() -->
-
-<!-- G_6 -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- save(AOI, UV22_1, UV22_2, UV22_3, UV22_4, UV22_5, UV22_6, file = "UV22.Rda") -->
-
-<!-- ``` -->
-
-<!-- # Your analysis -->
-
-<!-- ```{r} -->
-
-<!-- load(file = "UV22.Rda") -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- library(rstanarm) -->
-
-<!-- options(mc.cores = 4) -->
-
-<!-- library(bayr) -->
-
-<!-- ``` -->
-
-<!-- ## Exploration -->
-
-<!-- ```{r} -->
-
-<!-- UV22_4 %>%  -->
-
-<!--   group_by(AOI, congruent) %>%  -->
-
-<!--   summarize(mean_dur = mean(duration, na.rm = TRUE), -->
-
-<!--             sd_dur = sd(duration, na.rm = TRUE)) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- M_1 <-  -->
-
-<!--   UV22_4 %>%  -->
-
-<!--   stan_glm(duration ~ 1 + AOI + congruent + AOI:congruent, # AOI*congruence -->
-
-<!--            data = ., -->
-
-<!--            family = Gamma()) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- fixef(M_1) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- M_2 <-  -->
-
-<!--   UV22_4 %>%  -->
-
-<!--   stan_glm(duration ~ 0 + AOI:congruent, -->
-
-<!--            data = .) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- fixef(M_2) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- T_2 <- -->
-
-<!--   fixef(M_2) %>%  -->
-
-<!--   mutate(fixef = str_remove_all(fixef, "AOI|congruent")) %>%  -->
-
-<!--   separate(fixef, into = c("AOI", "congruence")) %>%  -->
-
-<!--   select(AOI, congruence, center, lower, upper) -->
-
-<!-- T_2 -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- T_2 %>%  -->
-
-<!--   ggplot(aes(x = AOI, col = congruence,  -->
-
-<!--              y = center, ymin = lower, ymax = upper)) + -->
-
-<!--   geom_point() + -->
-
-<!--   geom_line(aes(group = congruence)) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- M_3 <- stan_glm(n_visits ~ 1 + congruent,  -->
-
-<!--                 data = UV22_5, -->
-
-<!--                 family = neg_binomial_2()) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- fixef(M_3, mean.func = exp) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- M_4 <- stan_glm(n_visits ~ 1 + Sclera * Skull,  -->
-
-<!--                 data = UV22_6, -->
-
-<!--                 family = neg_binomial_2()) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- fixef(M_4) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- M_5 <- stan_glm(n_visits ~ 0 + Sclera : Skull,  -->
-
-<!--                 data = UV22_6, -->
-
-<!--                 family = neg_binomial_2()) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- fixef(M_5, mean.func = exp) -->
-
-<!-- ``` -->
