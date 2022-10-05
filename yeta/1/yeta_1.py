@@ -7,31 +7,22 @@ import os
 import time
 import logging as log
 import pygame as pg
+import pandas as pd
 from pygame.locals import *
 
-## Basic configuration
-USB = 1
-"""USB camera device number for YET (typically 1, sometimes 0 or 2)"""
+"""
+Name of file containing the Stimuli. By switching the stimulus file,
+different versions of the experiment can be tested. A shortened stimulus 
+file speeds up the testing cycles.
+"""
 
-EXP_ID = "UV22"
-"""Identifier for experiment"""
-
-EXPERIMENTER = "MS"
-"""Experimenter ID"""
-
-SURF_SIZE = (900, 900)
-"""Screen dimensions"""
-
-SLIDE_TIME = 4
-"""Presentation time per stimulus"""
-
-STIM_FILE = "Stimuli.csv"
-"""Name of file containing the Stimuli"""
-
-
-# own classes
 import libyeti14 as yeti14 ## importing everything from the module
 from libyeti14 import draw_text ## we will use this a lot
+"""
+The Yeti14 engine provides classes for measuring and recording ET data,
+handling a set of stimuli and calibrating the eye tracker.
+"""
+
 
 def main():
 
@@ -344,6 +335,24 @@ def main():
         pg.display.update()
 
 
+def read_config(path = "Config.csv"):
+    global USB, EXP_ID, EXPERIMENTER
+    global SURF_SIZE, SLIDE_TIME, STIM_FILE
+    global CONFIG 
+
+    CONFIG = dict()
+    Tab = pd.read_csv(path)
+    for index, row in Tab.iterrows():
+        CONFIG[row[0]] = row[1]
+    USB = int(CONFIG["USB"])
+    EXP_ID = str(CONFIG["EXP_ID"])
+    EXPERIMENTER = str(CONFIG["EXPERIMENTER"])
+    SURF_SIZE = (int(CONFIG["WIDTH"]), int(CONFIG["HEIGHT"]))
+    SLIDE_TIME = float(CONFIG["SLIDE_TIME"])
+    STIM_FILE = CONFIG["STIM_FILE"]
+
+
+
 def setup():
     """
     Creates global variables for Yeta_1 and changes the working directory
@@ -400,7 +409,7 @@ def init_pygame():
 
     BACKGR_COL = col_white
 
-
+read_config()
 setup()
 init_pygame()
 main()
