@@ -129,7 +129,7 @@ def main():
                     Yet.record_calib_data(Cal.active_pos())
                     """
                     During the calibration the frame processing is shut off, which can be seen in the frame processing
-                    section. On key press, one frame is captured, the quad-bright meaures are taken and added 
+                    section. On key press, one frame is captured, the quad-bright measures are taken and added 
                     to the training set.
 
                     After that the program checks whether their are remaining calibration points. 
@@ -372,7 +372,8 @@ def setup():
     YETA_NAME = "Yeta" + str(YETA)
 
     ## Paths and files
-    WD = os.path.dirname(sys.argv[0])
+    # WD = os.path.dirname(sys.argv[0])
+    WD = "."
     os.chdir(WD)
     """Working directory set to location of yeta_1.py"""
 
