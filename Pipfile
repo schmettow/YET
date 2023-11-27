@@ -5,6 +5,9 @@ name = "pypi"
 
 [packages]
 opencv-python = "*"
+pygame = "*"
+pandas = "*"
+scikit-learn = "*"
 
 [dev-packages]
 
