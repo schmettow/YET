@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="M. Schmettow">
+
+<title>The YET manual</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="index_files/libs/clipboard/clipboard.min.js"></script>
+<script src="index_files/libs/quarto-html/quarto.js"></script>
+<script src="index_files/libs/quarto-html/popper.min.js"></script>
+<script src="index_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="index_files/libs/quarto-html/anchor.min.js"></script>
+<link href="index_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="index_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="index_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="index_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="index_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">The YET manual</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>M. Schmettow </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="making-yet" class="level1">
+<h1>Making YET</h1>
+<section id="making-yet0" class="level2">
+<h2 class="anchored" data-anchor-id="making-yet0">Making YET0</h2>
+</section>
+<section id="sec-headrests-and-supports" class="level2">
+<h2 class="anchored" data-anchor-id="sec-headrests-and-supports">Headrests and supports</h2>
+</section>
+<section id="installing-the-software" class="level2">
+<h2 class="anchored" data-anchor-id="installing-the-software">Installing the software</h2>
+<!-- TODO: Use Rstudio as recommended Python editor -->
+<p>YET is currently programmed in Python and that makes the installation a little harder than you would expect.</p>
+<!--Usually, software programs are deployed as binary files. Every software is written in source code at some point, but is delivered in compiled form. The compilation process translates the (readable) source code into the bare (and cryptic) language of the target machine. That is why on many download pages you find multiple options, such as IA64/Windows or Apple/MacOS. In the following process of installation it is paramount that you always *choose the download option matching your system*.-->
+<p>The reason for that is that Python is an <em>interpreted language</em>, where the Software written in Python arrives at the users computer as <em>source code</em> and is run by a Python interpreter. In compiled languages, such as C, Java or Rust, the compiler translates the human-readable source code into binary code, which can run directly on the machine (i.e.&nbsp;the CPU in your computer). Unfortunately, the Python interpreter is a very complex software in its own right. This section will guide you through the steps to heave a fully-fledged Python environment on your computer, which will be able to run YET and many other Python programs.</p>
+<section id="getting-yet-from-github" class="level3">
+<h3 class="anchored" data-anchor-id="getting-yet-from-github">Getting YET from Github</h3>
+<p>The YET code resides in my Github repository <a href="http://github.com/schmettow/YET">schmettow/YET</a>. If you already know your way around Github, all you have to do is clone the YET repository to your computer.</p>
+<p>If you are new to Github, you can download the repository as a zip file (&lt;&gt; Code -&gt; Download Zip). Make sure to really unpack the Zip file, before you work with the YET code. It won’t work when you just enter the Zip file and try running it from there I</p>
+<p>n both cases, you will end up with a folder called <code>YET</code> or <code>YET-main</code> on your computer. This folder contains all the files needed to run YET. For a shortcut: <code>yeta/1/yeta_1.py</code> is the main program.</p>
+</section>
+<section id="beginners-choice-thonny" class="level3">
+<h3 class="anchored" data-anchor-id="beginners-choice-thonny">Beginner’s choice: Thonny</h3>
+<p>If you are new to programming, I recommend to start with Thonny, which is a beginner-friendly Python editor. It is available for Windows, MacOS and Linux. You can download it from <a href="https://thonny.org/" class="uri">https://thonny.org/</a>. The installation is straightforward and Thonny come with its own python environment, so you don’t have to install anything else.</p>
+<p>Except: YET makes use of several Python libraries, which are not included in the standard Thonny installation. You have to install them manually. To do so, open Thonny and click on the “Tools” menu and select “Manage Packages”. In the window that opens, type the name of the package into the search field and hit Return. Then click on the “Install” button.</p>
+<p>Repeat this for the following packages:</p>
+<ul>
+<li>scikit-learn</li>
+<li>pygame</li>
+<li>pandas</li>
+<li>opencv-camera</li>
+</ul>
+<p>You can close the package manager window afterwards.</p>
+</section>
+<section id="advanced-python-users" class="level3">
+<h3 class="anchored" data-anchor-id="advanced-python-users">Advanced Python Users</h3>
+<!-- If Python already is your regular choice for scientific computing (Statistics, Machine Learning, etc.), you probably have a Python environment installed already, and most likely it is Anaconda. You can quick-read the following section and make the adjustments to your Anaconda installment as needed.
+
+Anaconda supports a variety of editors, but for slightly advanced users, I recommend Visual Studio Code, which is included in Anaconda. Only if you plan to mostly work on CircuitPython code, I would recommend Thonny.
+
+#### Windows
+
+1.  From \<https://www.anaconda.com/download/\> download the latest 64-bit installer for Python 3.x (not 2.x).
+
+2.  Run the downloaded file and
+
+    1.  Install for "just me"
+
+    2.  Accept the proposed destination folder
+
+    3.  Accept default advanced options
+
+3.  Restart your computer after the installation has finished.
+
+In your Start Menu, you will find a new entry for Anaconda Prompt and Anaconda Navigator. Open the Navigator and you will see a display with tiles. For the following steps, we will need a *Python editor*, which is a program to write and execute Python source code. Spyder is a classic Python editor, which is included in Anaconda. Click on the Spyder tile and wait for the editor to open.
+
+Launch Spyder and create a new file. and write: `print("Hello World")` followed by Return. Then click on the green Play button at the to and watch the console closely. If you see a friendly greeting, you have a working Python environment.
+
+Next we have to install two *Python modules*. Modules are collections of useful functions that other programmers have made available. For the purpose of running an eye tracker, we need three modules, CV2, SkLearn and Pygame.
+
+-->
+</section>
+</section>
+<section id="testing-your-environment-and-trouble-shooting" class="level2">
+<h2 class="anchored" data-anchor-id="testing-your-environment-and-trouble-shooting">Testing your environment and trouble shooting</h2>
+<p>YET makes use of several libraries, namely:</p>
+<ul>
+<li><em>Pygame</em> for the graphical interface</li>
+<li><em>OpenCV</em> for capturing video streams and eye detection</li>
+<li><em>Scikit-Learn</em> for the machine-learning part</li>
+<li><em>Pandas</em> for data handling</li>
+</ul>
+<p>Scikit-Learn and Pandas are usually easy to install, but OpenCV and Pygames sometimes make trouble. Here is what you can do to verify your installation.</p>
+<section id="testing-the-opencv-installation" class="level3">
+<h3 class="anchored" data-anchor-id="testing-the-opencv-installation">Testing the OpenCV installation</h3>
+<p>Now you can test whether CV was installed correctly, by copy-and-pasting the following code into a new Python file and hitting the Run button. If the program fails to open the camera, try changing line 3 to <code>USB = 0</code> or <code>USB = 2</code>, until you see the video stream.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> cv2 <span class="im">as</span> cv</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>USB <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>:</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    cam <span class="op">=</span> cv.VideoCapture(USB)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span>:</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="st">"Cannot open camera on USB = "</span> <span class="op">+</span> <span class="bu">str</span>(USB) <span class="op">+</span> <span class="st">"Try the values 0, 1, 2"</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    sys.exit</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Q exits the program"</span>)</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Capture frame-by-frame</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    ret, frame <span class="op">=</span> cam.read()</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># if frame is read correctly ret is True</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> ret:</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>        <span class="bu">print</span>(<span class="st">"Can't receive frame (stream end?). Exiting ..."</span>)</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">break</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Our operations on the frame come here</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    gray <span class="op">=</span> cv.cvtColor(frame, cv.COLOR_BGR2GRAY)</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Display the resulting frame</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    cv.imshow(<span class="st">'frame'</span>, gray)</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> cv.waitKey(<span class="dv">1</span>) <span class="op">==</span> <span class="bu">ord</span>(<span class="st">'q'</span>):</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">break</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a><span class="co"># When everything done, release the capture</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>cam.release()</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>cv.destroyAllWindows()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>If CV2 is installed correctly, you should see yourself via your webcam or YET. If you still see error messages, that the USB device could not be found, this can have several reasons:</p>
+<ul>
+<li>It really only works, when at least one camera is connected via USB. On Notebooks, this usually is teh Webcam (USB0)</li>
+<li>The camera device is blocked by another application, such as video chat applications or OSB Studio. Close all other applications that use the webcam and try again.</li>
+<li>Since we are using ultra-cheap cameras for YET, maybe you got a bad sample, where the connectors arent’t good. Try connecting YET via USB and selecting it as a camera in your favorite video chat app. If that doesn’t work either, you probably got a broken sample.</li>
+</ul>
+</section>
+<section id="testing-the-pygame-installation" class="level3">
+<h3 class="anchored" data-anchor-id="testing-the-pygame-installation">Testing the Pygame installation</h3>
+<p>Pygame is used to create the user interface of YET. You can test the Pygame installation by pasting the following code into your programming editor:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pygame</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pygame.<span class="bu">locals</span> <span class="im">import</span> <span class="op">*</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pygame.compat <span class="im">import</span> unichr_, unicode_</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co">##### VARIABLES #####</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Colors</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>col_black <span class="op">=</span> (<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>col_gray <span class="op">=</span> (<span class="dv">120</span>, <span class="dv">120</span>, <span class="dv">120</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>col_white <span class="op">=</span> (<span class="dv">255</span>, <span class="dv">255</span>, <span class="dv">255</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>WIN_SIZE <span class="op">=</span> (<span class="dv">500</span>, <span class="dv">500</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>pygame.init()</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>pygame.display.set_mode(WIN_SIZE)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>pygame.display.set_caption(<span class="st">"Eye game with Pygame"</span>)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>WINDOW <span class="op">=</span> pygame.display.get_surface()</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>WINDOW.fill(col_white)</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"Canvas size is ("</span> <span class="op">+</span> <span class="bu">str</span>(WIN_SIZE[<span class="dv">0</span>]) <span class="op">+</span> <span class="st">","</span> <span class="op">+</span> <span class="bu">str</span>(WIN_SIZE[<span class="dv">1</span>]) <span class="op">+</span> <span class="st">")"</span>)</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">"(0,0) is the upper left corner"</span>)</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    WINDOW.fill(col_gray)</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> event <span class="kw">in</span> pygame.event.get():</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>        <span class="co"># IT</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> event.<span class="bu">type</span> <span class="op">==</span> QUIT:</span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>            pygame.quit()</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>            <span class="co"># sys.exit()</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>    <span class="co"># presentitionals</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    pygame.draw.circle(WINDOW, col_white, (<span class="dv">250</span>, <span class="dv">250</span>), <span class="dv">200</span>)</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    pygame.draw.circle(WINDOW, col_gray, (<span class="dv">250</span>, <span class="dv">250</span>), <span class="dv">150</span>)</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    pygame.draw.circle(WINDOW, col_black, (<span class="dv">250</span>, <span class="dv">250</span>), <span class="dv">80</span>)</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    pygame.display.update()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>If you see three circles, your Pygame installation is working</p>
+</section>
+</section>
+</section>
+<section id="using-yet" class="level1">
+<h1>Using YET</h1>
+<p>An eye tracker is a device which records an image of the eyeball and uses it to calculate the position of the eyeball. Since digital cameras connected to computers are not a big deal, the magic of every eye tracker truly lies in how an eyeball picture (eye frame) obtained from the camera is converted into two numbers, x and y, to indicate which direction the participant is gazing.</p>
+<p>Most eye trackers need <em>training</em> before they can produce coordinates for a particular person. This is often called <em>calibration</em> and usually involves that the participant is asked to look at some targets on the screen. The eye frame is recorded at these coordinates and used as a <em>training sample</em>. If you think this sounds a lot like a machine learning application, you are right. Section <strong>?@sec-quad-bright</strong> will explain how Yet, or more specifically the Yeti14 engine, is doing the translation from <em>eye frames</em> to <em>coordinates</em>. It is more simple than you might think.</p>
+<p>Yeta1 is a Python program that allows you to run eye tracking experiments using pictures in a slide show. It comes with two calibration routines. During the <em>initial training</em> the user is asked to look at nine target dots on the screen, one-by-one. During <em>quick calibration</em>, the participant is asked to look at a single dot at the center of the screen. During the experiment the quick calibration is used to frequently (but quickly) correct the translation for any movements of the head or the camera. This way, Yet can operate accurately over longer periods, without the need of head tracking or head support. However, it is still recommended to use a stable head mount (e.g.&nbsp;a headphone, see section ) and a simple head rest, at least.</p>
+<p>An eye tracker would be useless if you don’t know <em>what</em> the user sees. Some eye trackers solve this problem by using a second head-mounted camera that points in forward direction. Yeta1 solves the problem by controlling what the user sees on the screen. With Yeta1 we can create experiments by calibrating the eye tracker for a computer screen and then showing a sequence pictures on the same screen.</p>
+<p>The YET eye tracker system is designed as a a lean machine. You give it a bunch of pictures and Yet records the x,y coordinates while the participant is viewing them. There are no fancy dashboards or monitors. This part of the eye tracking research workflow is left to a data analysis tool, which was designed as a dynamic report in R/Quarto. This report reads all the recorded data and produces a whole set of useful measures, statistics and plots. After all, x,y coordinates are not very useful, per se. The dynamic report creates relevant measures, such as fixations, dwelling time and distance traveled. In addition, the Yeta1 dynamic report also supports area-of-interest coding.</p>
+<p>The following section runs you through the design of experiment with Yet, by example of a real study.</p>
+<section id="running-an-experiments-with-yeta1" class="level2">
+<h2 class="anchored" data-anchor-id="running-an-experiments-with-yeta1">Running an experiments with Yeta1</h2>
+<p>You should have obtained Yeta1 as a package, which contains:</p>
+<ul>
+<li><p>yeta_1.py: the Python code of Yeta1.</p></li>
+<li><p>yeta_1.Rmd: the dynamic report</p></li>
+<li><p>a directory Stimuli, which contains:</p>
+<ul>
+<li><p>a set of picture files</p></li>
+<li><p>A Csv table Stimuli.csv, listing and describing the picture files.</p></li>
+</ul></li>
+<li><p>a directory Data, which may contain Csv files. Here, Yeta_1 will drop the data.</p></li>
+<li><p>a directory yeti14, which contains additional Python files.</p></li>
+</ul>
+<p>If you want to see how Yeta_1 works, simply strap on your Yet0, open yeta_1.py in your favorite editor and run it.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+The Uncanny Valley
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The Uncanny Valley is a strange effect observed in human emotional responses to faces. While, generally, more human-like faces are preferred, faces that are human-like, but yet distinguishable, create feelings of erie. The UV22 experiment uses eye tracking to examine patterns of visual attention when viewing faces of Great Apes, including Homo Sapiens’ and their ancestors. Every face comes in two versions: with human-like eyes (white sclera) and with ape-like eyes (dark sclera). The research question is, whether a mismatch between eyes (ape or human) and skull (ape or human) is responsible for the Uncanny Valley effect.</p>
+</div>
+</div>
+<p>And here is the quick start for running your own experiment:</p>
+<ol type="1">
+<li>Replace the picture files with your own material</li>
+<li>Adjust the Stimuli.csv accordingly.</li>
+<li>Start yeta_1.py to run the experiment. Per run, Yeta_1 will create a new CSV file with a unique name in directory Data.</li>
+<li>If you need area-of-interest coding, you have to create your own AOI.csv table.</li>
+<li>After running one or multiple runs of the experiment, the collected results can be analyzed using the dynamic report yeta_1.rmd. For this purpose, open the Rmd file in Rstudio and knit it. The resulting report is designed to be self-explaining.</li>
+</ol>
+<section id="basic-configuration" class="level3">
+<h3 class="anchored" data-anchor-id="basic-configuration">Basic configuration</h3>
+<p>Yeta1 does not have a user interface for the experimenter. In order to configure Yeta1, you will have to open the code (yeta_1.py) and adjust it to your needs. It is not complicated, because you only have to set the right values for a few parameters. The following table explains all configuration parameters, Yeta1 uses.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="tbl-config-vars" class="anchored">
+<table class="table table-sm table-striped small">
+<caption>Table&nbsp;1: Variables for configuration</caption>
+<colgroup>
+<col style="width: 20%">
+<col style="width: 80%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Variable</th>
+<th style="text-align: left;">Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">USB</td>
+<td style="text-align: left;">USB device number. On systems equipped with a webcam, this usually is 1 (webcam is zero)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">EXP_ID</td>
+<td style="text-align: left;">Name of your experiment</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">EXPERIMENTER</td>
+<td style="text-align: left;">Name or identifier of the experimenter.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">STIM_PATH</td>
+<td style="text-align: left;">Directory where the pictures reside. Default this is to collect stimuli in a directory Stimuli, which must be in the same folder as yeta_1.py</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">STIM_INFO</td>
+<td style="text-align: left;">Directory where the stimulus description table is stored. Default this is Stimuli/Stimuli.csv</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RESULT_DIR</td>
+<td style="text-align: left;">Directory, where results are stored. Default is Data/</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PART_ID</td>
+<td style="text-align: left;">Participant identifier. Default is a timestamp.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RESULT_FILE</td>
+<td style="text-align: left;">File where the results of one run are stored. Defaults to Data/yeta1_Experiment_Experimenter_Part.csv</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">SCREEN_W</td>
+<td style="text-align: left;">Width of the window</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SCREEN_H</td>
+<td style="text-align: left;">Height of the window</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">SLIDE_TIME</td>
+<td style="text-align: left;">time in seconds between slides</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<p>Most of these parameters have default values, that should work well, if you leave the directory structure of Yeta_1 untouched. A parameter that you may have to change is</p>
+<p><code>USB = 1</code></p>
+<p>This denotes that the second USB camera, that is connected to the system is used. Why the second? Because most systems already have a webcam built-in or external connected, which counts as the first device. If you have not yet acquired or made YET0, you can as well use the webcam for a first try. But it won’t get you very far, which was the initial problem that lead to the YET project.</p>
+<p>The parameters that you should change are:</p>
+<p>EXP_ID will appear as an identifier for the experiment Yeta_1 was used for. It is used to create the filenames, but also appears in the results table. Say, your experiment takes place in 2023 and is about the Stroop task, then you could create a experiment identifier by changing the line</p>
+<p><code>EXP_ID = "UV22"</code></p>
+<p>to</p>
+<p><code>EXP_ID = "Strp23"</code></p>
+<p>EXPERIMENTER will appear as an identifier for the experimenter. This is useful, when the data collection is carried out by a team, where every member has a different setup (e.g.&nbsp;screen size). If every experimenter sets the parameter to their own, say initials, the data analysis can make use of this by controlling for experimenter differences. If your name happened to be Zaphot Beeblebrox, then you could set the experimenter ID to:</p>
+<p><code>EXERIMENTER = "ZB"</code></p>
+<p>SCREEN_SIZE contains two valuzes, which are the width and the height of the Yeta_1 window. Both are measured in pixel and should not exceed the real screen height and width. The default of 800 by 800 should work on practically all systems, but is not optimal if you have a much better resolution. Note that these values should be set to a slightly smaller value than the actual screen size, to account for window decorations. If your computer has a the screen dimensions 1920 x 1080 (HD), the following values should work well:</p>
+<p><code>SCREEN_SIZE = (1800, 1200)</code></p>
+<p>Finally, the parameter SLIDES_TIME can be adjusted to increase or decrease the presentation time per stimulus in seconds. One reason to change this to a longer value if your stimuli contain text to be read, for example, when you are evaluating websites. A reason to set it to a smaller value is that when developing your experiment you will typically do many test runs. By setting the presentation time to half one second, this process gets much faster.</p>
+<p><code>SLIDE_TIME = 0.5</code></p>
+<p>Up to this point, you have given Yeta_1 some meta data and adjusted it to your screen. If you run Yeta_1 one more time, it should run the same experiment, but with adjusted window title and identifier columns in the results files. In the next section I will explain how to set up a new set of stimuli for Yet.</p>
+</section>
+<section id="preparing-stimuli" class="level3">
+<h3 class="anchored" data-anchor-id="preparing-stimuli">Preparing Stimuli</h3>
+</section>
+<section id="working-with-eye-tracking-data" class="level3">
+<h3 class="anchored" data-anchor-id="working-with-eye-tracking-data">Working with eye tracking data</h3>
+</section>
+</section>
+<section id="limitations-of-yet0" class="level2">
+<h2 class="anchored" data-anchor-id="limitations-of-yet0">Limitations of YET0</h2>
+<ul>
+<li>strong light, short episodes</li>
+<li>lack of head tracking</li>
+</ul>
+</section>
+</section>
+<section id="understanding-yet" class="level1">
+<h1>Understanding YET</h1>
+<section id="quad-bright" class="level2">
+<h2 class="anchored" data-anchor-id="quad-bright">The quad-bright model</h2>
+</section>
+<section id="using-yet-in-your-own-projects" class="level2">
+<h2 class="anchored" data-anchor-id="using-yet-in-your-own-projects">Using YET in your own projects</h2>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
