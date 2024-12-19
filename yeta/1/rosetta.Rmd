@@ -1,0 +1,551 @@
+---
+title: "Rosetta"
+author: "M Schmettow"
+date: "05/10/2022"
+output: html_document
+---
+
+```{r message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(printr)
+require(readxl)
+require(jpeg)
+require(ggimg)
+```
+
+## Input and preparation
+
+### Reading meta data
+
+#### Tidyverse
+
+```{r}
+library(tidyverse)
+
+read_yeta1_stim <- 
+  function(file = "Stimuli/Stimuli.csv", 
+           stim_dir = "Stimuli/",
+           col_types = cols(File = col_character(),
+                            width = col_double(),
+                            height = col_double(),
+                            hum_like = col_double(),
+                            hum_skull = col_logical(),
+                            hum_eye = col_logical(),
+                            Face = col_character())){
+    stimuli <-
+      read_csv(file, col_types = col_types) |> 
+      mutate(Path = str_c(stim_dir, File, sep = "")) |> 
+      rename(Stim = File)
+    return(stimuli)    
+  }
+
+stims <- 
+  read_yeta1_stim()
+
+ 
+stims |>  sample_n(10)
+```
+
+```{r}
+read_yeta1_aoi <- 
+  function(file = "Stimuli/AOI.csv",
+           stim_dir = "Stimuli/",
+           col_types = cols(AOI = col_character(), Face = col_character(), 
+                            x = col_double(), y = col_double(), 
+                            w = col_double(), h = col_double()),
+           stim_tab) {
+    
+    read_csv(file, col_types = col_types) %>% 
+      rename(x_aoi = x, y_aoi = y, w_aoi = w, h_aoi = h) %>% 
+      right_join(stim_tab, by = "Face") %>% 
+      mutate(xmin = x_aoi, 
+             xmax = x_aoi + w_aoi,
+             ymin = (height - y_aoi) - h_aoi,
+             ymax = height - y_aoi) |>  ## reversing the y coordinates) %>% 
+      arrange(Face, AOI)
+  }
+
+aoi <- read_yeta1_aoi(stim_tab = stims) |> 
+  select(Stim, Face, AOI, x_aoi:h_aoi, width , height, hum_like:hum_eye, Path) |> 
+  arrange(Stim, AOI)
+```
+
+
+
+
+
+
+#### Pandas
+
+```{python}
+from pandas import read_csv
+import os
+
+stim_dir = os.path.dirname("Stimuli/")
+
+dtype = {
+        'File': 'string',
+        'width': 'int16',
+        'height': 'int16',
+        'hum_like': 'float32',
+        'hum_skull': 'boolean',
+        'hum_eyes': 'boolean',
+        'Face': 'string'
+    }
+stims = read_csv(file, dtype = dtype)\
+          .apply(lambda row: os.path.join(stim_dir, row["File"]),  axis = 1)
+
+
+stim = read_yeta1_stim()
+stim.sample(10)
+```
+
+#### Polars
+
+```{python}
+import polars as pl
+from polars import * #read_csv, String, Int16, Float32, Boolean, col
+import os
+
+schema={
+        'File': String,
+        'width': Int16,
+        'height': Int16,
+        'hum_like': Float32,
+        'hum_skull': Int16,
+        'hum_eye': Int16,
+        'Face': String
+    }
+
+stim_dir = "Stimuli/"
+stims = read_csv(stim_dir + "/Stimuli.csv", schema = schema ).\
+          cast({"hum_eye": Boolean, "hum_skull": Boolean}).\
+          with_columns((stim_dir + col("File")).alias("Path")).\
+          rename
+
+stims.sample(10)
+```
+
+```{python}
+import polars as pl
+from polars import * #read_csv, String, Int16, Float32, Boolean, col
+import os
+
+schema={
+        'Face': String,
+        'AOI': String,
+        'x': Float32,
+        'y': Float32,
+        'w': Float32,
+        'h': Float32
+    }
+
+
+aois = read_csv(stim_dir + "/AOI.csv", schema = schema )
+```
+
+### Reading raw data
+
+#### Tidyverse
+
+```{r}
+library(tidyverse)
+
+read_yeta1_csv <- function(file){
+  read_csv(file, 
+           col_types = cols(Exp = col_character(), Part = col_character(), 
+                            Stim = col_character(), time = col_double(), 
+                            x = col_double(), y = col_double(), 
+                            x_pro = col_double(), y_pro = col_double())) %>% 
+    mutate(is_duplicate = x == lag(x) & y == lag(y)) %>% 
+    filter(!is_duplicate) %>% 
+    mutate(File = file) %>% 
+    select(Exp, Part, Stim, time, x, y, x_pro, y_pro)
+}
+
+csv_files <- dir(path = "Data/",
+             pattern = "*.csv",
+             recursive = T,
+             full.names = T)
+
+add_travel <- 
+  function(data) 
+    mutate(data,  travel = sqrt((x - lag(x))^2 + (y - lag(y))^2))
+
+add_duration <- 
+  function(data) 
+    mutate(data,  duration = lead(time) - time)
+
+
+UV22_0 <- 
+    csv_files %>% 
+    map_df(read_yeta1_csv) %>% 
+    mutate(Obs  = row_number()) %>%
+    mutate(Part = as.factor(as.integer(Part) - min(as.integer(Part)) + 1)) %>% ## reducing the Part identifier
+    group_by(Part) %>%
+    mutate(time = time - min(time)) %>% # time since start experiment
+    ungroup() %>%
+    left_join(stims, by = c("Stim","File")) %>% 
+    mutate(y = height - y, # translating from origin at top (pygame) to bottom (ggplot)
+           y_pro = 1 - y_pro)
+
+
+%>%
+    select(Exp, Obs, Part, Stim, time, x, y, x_pro, y_pro) |> 
+    add_travel() |> 
+    add_duration() |> 
+
+
+
+
+```
+
+
+#### Pandas
+
+```{python}
+import pandas as pd
+
+dtypes = 
+
+```
+
+
+#### Polars
+
+```{python}
+from polars import *
+from glob import glob
+
+csv_dir = os.path.join(os.path.curdir, "Data")
+
+
+schema={
+        'Exp': String,
+        'Part': String,
+        'Stim': String,
+        'time': Float64,
+        'x':    Float32,
+        'y':    Float32,
+        'x_pro': Float32,
+        'y_pro': Float32
+    }
+    
+csv_files = glob(csv_dir + "/*.csv")    
+
+UV22 = DataFrame(schema = schema)
+for f in csv_files:
+  UV22 = UV22.vstack(read_csv(f, schema = schema))
+
+
+UV22 = UV22.\
+  join(stims, left_on = "Stim", right_on = "File", how = "left").\
+  join(aois, on = "Face", how = "left", suffix = "_aoi")
+
+
+  
+```
+
+
+
+
+
+### Raw data visualization
+
+```{r}
+get_last_part <- function(data){
+  last_part <- 
+    distinct(data, Part) %>% 
+    filter(as.numeric(Part) == max(as.numeric(Part), na.rm = T)) %>% 
+    left_join(data, by = "Part")
+  return(last_part)
+}
+
+```
+
+```{r}
+G_0 +
+  geom_point(aes(x = x, y = y),
+             size = 2,
+             col = "red",
+             alpha = .2,
+             data = get_last_part(UV22_0),
+             inherit.aes = F) +
+  facet_wrap(~Stim)
+```
+
+```{r}
+G_0 +
+  geom_point(aes(x = x, y = y,
+                 col = Part), # <--
+             size = 2,
+             data = UV22_0, # <--
+             inherit.aes = F) +
+  facet_wrap(~Stim)
+```
+
+```{r}
+G_0 +
+  geom_point(aes(x = x, y = y,
+                 col = Part),
+             data = get_last_part(UV22_0),
+             size = .1,
+             inherit.aes = F) +
+  geom_line(aes(x = x , 
+                y = y,
+                group = Part),
+                col = "red",
+             inherit.aes = F,
+            data = get_last_part(UV22_0)) +
+  facet_wrap(~Stim)
+```
+
+### Adding Stimulus meta data
+
+```{r}
+UV22_1 <- 
+  UV22_0 %>% 
+  left_join(Stimuli, by = "Stim") %>% 
+  select(Obs, Part, Stim, Face, hum_like, Sclera, Skull, time, x, y)
+
+sample_n(UV22_1, 12)
+```
+
+## Deriving measures
+
+-   measuring travel and duration
+
+```{r}
+add_travel <- 
+  function(data) 
+    mutate(data,  travel = sqrt((x - lag(x))^2 + (y - lag(y))^2))
+
+add_duration <- 
+  function(data) 
+    mutate(data,  duration = lead(time) - time)
+
+
+UV22_2 <- 
+  UV22_1 %>% 
+  mutate(Sequence = as.factor(str_c(Part, Stim, sep = "_"))) %>% 
+  group_by(Sequence) %>% 
+  add_duration() %>% 
+  add_travel() %>% 
+  ungroup() %>% 
+  select(Obs, Part, Stim, Face, Sequence, hum_like, 
+         Sclera, Skull, time, x, y, travel, duration)
+```
+
+```{r}
+
+UV22_2 %>% 
+  ggplot(aes(x = duration)) +
+  geom_histogram() +
+  facet_wrap(~Stim)
+
+
+UV22_2 %>% 
+  ggplot(aes(x = travel)) +
+  geom_histogram() +
+  facet_wrap(~Stim)
+```
+
+### Areas of interest
+
+#### Reading AOI
+
+```{r}
+read_yeta1_aoi <- 
+  function(file = "Stimuli/AOI.csv",
+           stim_dir = "Stimuli/",
+           col_types = cols(AOI = col_character(), Face = col_character(), 
+                            x = col_double(), y = col_double(), 
+                            w = col_double(), h = col_double()),
+           stim_tab) {
+    
+    read_csv(file, col_types = col_types) %>% 
+      rename(x_aoi = x, y_aoi = y, w_aoi = w, h_aoi = h) %>% 
+      right_join(stim_tab, by = "Face") %>% 
+      mutate(xmin = x_aoi, 
+             xmax = x_aoi + w_aoi,
+             ymax = height - y_aoi, ## reversing the y coordinates
+             ymin = (height - y_aoi) - h_aoi) %>% 
+      arrange(Face, AOI)
+  }
+
+```
+
+```{r}
+AOI <- read_yeta1_aoi(stim_tab = Stimuli)
+
+head(AOI)
+```
+
+#### AOI preview
+
+```{r fig.height = 8, fig.width = 8}
+G_1 <- 
+  AOI %>% 
+  ggplot(aes(xmin = 0, xmax = width, 
+             ymin = 0, ymax = height)) +
+  facet_wrap(~Face) + # <--
+  ggimg::geom_rect_img(aes(img = Path)) +
+  geom_rect(aes(xmin = xmin, ymin = ymin, 
+                xmax = xmax, ymax = ymax,
+                fill = AOI),
+            alpha = .2, 
+            inherit.aes  = F)
+
+G_1
+```
+
+#### AOI Classification
+
+```{r}
+UV22_3 <- 
+  UV22_2 %>% 
+  left_join(AOI, by = "Face") %>% 
+  mutate(is_in = x > xmin & x < xmax & y > ymin & y < ymax) %>% 
+  filter(is_in) %>% 
+  select(Obs, AOI) %>% 
+  right_join(UV22_2, by = "Obs") %>% 
+  mutate(AOI = if_else(is.na(AOI), "Outside", AOI)) %>% 
+  arrange(Part, time)
+
+summary(UV22_3)
+```
+
+```{r}
+UV22_3 %>% 
+  group_by(AOI, Sclera, Skull) %>% 
+  summarize(n = n()) %>% 
+  ungroup() %>% 
+  ggplot(aes(y = n, x = AOI, fill = AOI)) +
+  facet_grid(Skull~Sclera) +
+  geom_col()
+
+```
+
+```{r}
+G_0 +
+  geom_count(aes(x = x, y = y, 
+                 col = AOI),
+             alpha = .5,
+             inherit.aes  = F,
+             data = UV22_3)
+```
+
+### Measuring visits
+
+A *visit* is a closed sequence of eye positions in the same region. The following code uses a combined criterion for setting a new visits:
+
+-   the position falls into a different AOI
+
+-   OR: the travel traveled from the previous position exceeds a certain threshold
+
+```{r}
+
+travel_threshold <- 50
+
+UV22_4 <-
+
+  UV22_3 %>%
+
+  group_by(Part, Stim) %>%
+
+  filter(AOI != lag(AOI) | travel > travel_threshold) %>% ## logical OR
+
+  mutate(visit = row_number(),
+
+         duration = lead(time) - time) %>%
+
+  ungroup()
+
+sample_n(UV22_4, 10)
+
+```
+
+#### Plotting visit paths and duration
+
+```{r fig.width=8, fig.height = 8}
+
+G_3 <-
+
+  G_0 +
+  geom_point(aes(x = x, y = y,
+                 size = duration), # <--
+             color = "white",
+             alpha = .2,
+             inherit.aes  = F,
+             data = UV22_4)
+
+G_3
+
+```
+
+```{r}
+
+G_4 <-
+  G_0 +
+  geom_path(aes(x = x, y = y,
+                col = Part),
+            inherit.aes  = F,
+            data = UV22_4) # <--
+
+G_4
+
+```
+
+
+## Participant-level analysis
+
+### Frequencies and durations
+
+```{r}
+
+UV22_6 <-
+  UV22_4 %>%
+  group_by(Part, Face, AOI, Sclera, Skull) %>%  # <--
+  summarize(n_visits = n(),
+            total_dur = sum(duration, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  mutate(congruent = (Sclera == Skull))
+
+
+UV22_6
+
+```
+
+```{r}
+
+G_6 <-
+
+  UV22_6 %>%
+  ggplot(aes(x = congruent, y = n_visits, fill = AOI)) +
+  facet_wrap(~Part) +
+  geom_col()
+
+G_6
+
+```
+
+
+```{r}
+
+G_7 <-
+  UV22_6 %>%
+  ggplot(aes(x = AOI, y = total_dur, fill = congruent)) +
+  facet_wrap(~Part) +
+  geom_col()
+
+G_7
+
+```
+
+```{r}
+
+save(AOI, UV22_1, UV22_2, UV22_3, UV22_4, UV22_6, file = "UV22.Rda")
+
+```
+
