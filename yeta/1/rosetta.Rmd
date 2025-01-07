@@ -1,4 +1,4 @@
----
+hh---
 title: "Rosetta"
 author: "M Schmettow"
 date: "05/10/2022"
@@ -40,35 +40,27 @@ read_yeta1_stim <-
     return(stimuli)    
   }
 
-stims <- 
-  read_yeta1_stim()
-
- 
-stims |>  sample_n(10)
-```
-
-```{r}
 read_yeta1_aoi <- 
   function(file = "Stimuli/AOI.csv",
            stim_dir = "Stimuli/",
            col_types = cols(AOI = col_character(), Face = col_character(), 
                             x = col_double(), y = col_double(), 
-                            w = col_double(), h = col_double()),
-           stim_tab) {
+                            w = col_double(), h = col_double())) {
     
     read_csv(file, col_types = col_types) %>% 
+      mutate(xmin = x, 
+             xmax = x + w,
+             ymin = y - h,
+             ymax = y) |>  ## reversing the y coordinates) %>%
       rename(x_aoi = x, y_aoi = y, w_aoi = w, h_aoi = h) %>% 
-      right_join(stim_tab, by = "Face") %>% 
-      mutate(xmin = x_aoi, 
-             xmax = x_aoi + w_aoi,
-             ymin = (height - y_aoi) - h_aoi,
-             ymax = height - y_aoi) |>  ## reversing the y coordinates) %>% 
       arrange(Face, AOI)
   }
 
-aoi <- read_yeta1_aoi(stim_tab = stims) |> 
-  select(Stim, Face, AOI, x_aoi:h_aoi, width , height, hum_like:hum_eye, Path) |> 
-  arrange(Stim, AOI)
+
+stims <- read_yeta1_stim() 
+aoi <-  read_yeta1_aoi()
+
+
 ```
 
 
@@ -78,7 +70,7 @@ aoi <- read_yeta1_aoi(stim_tab = stims) |>
 
 #### Pandas
 
-```{python}
+```{python eval = FALSE}
 from pandas import read_csv
 import os
 
@@ -97,8 +89,8 @@ stims = read_csv(file, dtype = dtype)\
           .apply(lambda row: os.path.join(stim_dir, row["File"]),  axis = 1)
 
 
-stim = read_yeta1_stim()
-stim.sample(10)
+stims = read_yeta1_stim()
+stims.sample(10)
 ```
 
 #### Polars
@@ -108,23 +100,20 @@ import polars as pl
 from polars import * #read_csv, String, Int16, Float32, Boolean, col
 import os
 
-schema={
-        'File': String,
-        'width': Int16,
-        'height': Int16,
-        'hum_like': Float32,
-        'hum_skull': Int16,
-        'hum_eye': Int16,
-        'Face': String
-    }
+schema_stim = { 'File': String,
+                'width': Int16,
+                'height': Int16,
+                'hum_like': Float32,
+                'hum_skull': Int16,
+                'hum_eye': Int16,
+                'Face': String}
 
 stim_dir = "Stimuli/"
 stims = read_csv(stim_dir + "/Stimuli.csv", schema = schema ).\
           cast({"hum_eye": Boolean, "hum_skull": Boolean}).\
-          with_columns((stim_dir + col("File")).alias("Path")).\
-          rename
+          with_columns((stim_dir + col("File")).alias("Path"))
 
-stims.sample(10)
+#stims.sample(10)
 ```
 
 ```{python}
@@ -132,17 +121,23 @@ import polars as pl
 from polars import * #read_csv, String, Int16, Float32, Boolean, col
 import os
 
-schema={
-        'Face': String,
+schema_aoi={'Face': String,
         'AOI': String,
         'x': Float32,
         'y': Float32,
         'w': Float32,
-        'h': Float32
-    }
+        'h': Float32}
 
 
-aois = read_csv(stim_dir + "/AOI.csv", schema = schema )
+aois = read_csv(stim_dir + "/AOI.csv", schema = schema_aoi)\
+  .with_columns(((col.x).alias("xmin")),
+                (col.x + col.w).alias("xmax"),
+                (col.y - col.h).alias("ymin"),
+                (col.y).alias("ymax"))\
+  .rename({"x": "x_aoi",
+           "y": "y_aoi",
+           "w": "w_aoi",
+           "h": "h_aoi"})
 ```
 
 ### Reading raw data
@@ -154,14 +149,16 @@ library(tidyverse)
 
 read_yeta1_csv <- function(file){
   read_csv(file, 
-           col_types = cols(Exp = col_character(), Part = col_character(), 
-                            Stim = col_character(), time = col_double(), 
-                            x = col_double(), y = col_double(), 
-                            x_pro = col_double(), y_pro = col_double())) %>% 
+           col_types = cols(Part = col_character(), 
+                            Picture = col_character(), 
+                            time = col_double(), 
+                            xraw = col_double(), yraw = col_double(), 
+                            x = col_double(), y = col_double())) %>% 
     mutate(is_duplicate = x == lag(x) & y == lag(y)) %>% 
     filter(!is_duplicate) %>% 
-    mutate(File = file) %>% 
-    select(Exp, Part, Stim, time, x, y, x_pro, y_pro)
+    mutate(File = Picture, 
+           Exp = "UV22") %>% 
+    select(Exp, Part, Stim = Picture, File = Picture, time, x, y)
 }
 
 csv_files <- dir(path = "Data/",
@@ -169,36 +166,31 @@ csv_files <- dir(path = "Data/",
              recursive = T,
              full.names = T)
 
-add_travel <- 
-  function(data) 
-    mutate(data,  travel = sqrt((x - lag(x))^2 + (y - lag(y))^2))
+add_travel   <- function(data) mutate(data,  travel = sqrt((x - lag(x))^2 + (y - lag(y))^2))
+add_duration <- function(data) mutate(data,  duration = lead(time) - time)
+is_in_aoi   <-  function(data) mutate(data, is_in_aoi = x > xmin & x < xmax & y > ymin & y < ymax ) 
 
-add_duration <- 
-  function(data) 
-    mutate(data,  duration = lead(time) - time)
-
-
-UV22_0 <- 
+D_0 <- 
     csv_files %>% 
     map_df(read_yeta1_csv) %>% 
-    mutate(Obs  = row_number()) %>%
+    mutate(Exp = "UV22",
+           Obs  = row_number()) %>%
     mutate(Part = as.factor(as.integer(Part) - min(as.integer(Part)) + 1)) %>% ## reducing the Part identifier
     group_by(Part) %>%
     mutate(time = time - min(time)) %>% # time since start experiment
     ungroup() %>%
-    left_join(stims, by = c("Stim","File")) %>% 
-    mutate(y = height - y, # translating from origin at top (pygame) to bottom (ggplot)
-           y_pro = 1 - y_pro)
-
-
-%>%
-    select(Exp, Obs, Part, Stim, time, x, y, x_pro, y_pro) |> 
+    left_join(stims, by = "Stim") %>%
+    right_join(aoi, by = "Face") |> # this expands the data set 
     add_travel() |> 
     add_duration() |> 
+    is_in_aoi() |> 
+    filter(is_in_aoi) |> 
+    select(Obs, Part, Stim, Face, time, x, y, AOI, hum_like, hum_skull, hum_eye, duration, travel)
 
+colnames(D_0)
+dim(D_0)[1]
 
-
-
+sample_n(D_0, 10)
 ```
 
 
@@ -217,34 +209,62 @@ dtypes =
 ```{python}
 from polars import *
 from glob import glob
+import os
 
-csv_dir = os.path.join(os.path.curdir, "Data")
-
-
-schema={
-        'Exp': String,
-        'Part': String,
-        'Stim': String,
+schema_csv={
+        'Part': Int32,
+        'Picture': String,
         'time': Float64,
         'x':    Float32,
         'y':    Float32,
-        'x_pro': Float32,
-        'y_pro': Float32
+        'xraw': Float32,
+        'yraw': Float32
     }
+
+
+def read_yeta1_csv(file):
+  out = read_csv(file, schema = schema_csv)
+  out = out.with_columns(shift_x = col("x").shift(), shift_y = col("y").shift())
+  #out = out.rename({"Picture": "Stim"})
+  out = out.filter((out["x"]!=out["shift_x"]) & (out["y"]!=out["shift_y"]))
+  out = out.drop(["shift_x", "shift_y"])
+  return out
+
+
+def is_in_aoi(data):
+  return data.with_columns(col("is_in") = col.x > xmin & col.x < xmax)
     
+
+csv_dir = os.path.join(os.path.curdir, "Data")
 csv_files = glob(csv_dir + "/*.csv")    
 
-UV22 = DataFrame(schema = schema)
+D_0 = DataFrame(schema = schema_csv)
 for f in csv_files:
-  UV22 = UV22.vstack(read_csv(f, schema = schema))
+  D = D_0.vstack(read_yeta1_csv(f))
+
+D = D.rename({"Picture": "Stim"})
+D = D.with_columns(Part = (col("Part") - col("Part").min() + 1))
+D = D.with_columns(time = (col("time") - col("time").min()).over("Part"))
+D = D.with_columns(col("Part").cast(String))
 
 
-UV22 = UV22.\
-  join(stims, left_on = "Stim", right_on = "File", how = "left").\
-  join(aois, on = "Face", how = "left", suffix = "_aoi")
+D = D.join(stims, left_on = "Stim", right_on = "File", how = "left")
 
 
-  
+D = D.join(aois, on = "Face", how = "right", suffix = "_aoi")
+D = D.with_columns(is_in_x = (col("x") > col("x_aoi")) & (col("x") < (col("x_aoi") + col("w_aoi"))),
+                is_in_y = (col("y") < col("y_aoi")) & (col("y") > (col("y_aoi") - col("h_aoi"))))
+D = is_in_aoi(D)                
+                
+                
+D = D.with_columns(is_in = (col("is_in_x") & col("is_in_y")))
+D = D.filter(col("is_in"))
+
+#D = D.select(["x", "y", "x_aoi", "y_aoi", "h_aoi", "w_aoi"])
+#  .drop(["is_in_x", "is_in_y"])
+D
+
+
 ```
 
 
@@ -270,7 +290,7 @@ G_0 +
              size = 2,
              col = "red",
              alpha = .2,
-             data = get_last_part(UV22_0),
+             data = get_last_part(D_0),
              inherit.aes = F) +
   facet_wrap(~Stim)
 ```
@@ -280,7 +300,7 @@ G_0 +
   geom_point(aes(x = x, y = y,
                  col = Part), # <--
              size = 2,
-             data = UV22_0, # <--
+             data = D_0, # <--
              inherit.aes = F) +
   facet_wrap(~Stim)
 ```
@@ -289,7 +309,7 @@ G_0 +
 G_0 +
   geom_point(aes(x = x, y = y,
                  col = Part),
-             data = get_last_part(UV22_0),
+             data = get_last_part(D_0),
              size = .1,
              inherit.aes = F) +
   geom_line(aes(x = x , 
@@ -297,19 +317,19 @@ G_0 +
                 group = Part),
                 col = "red",
              inherit.aes = F,
-            data = get_last_part(UV22_0)) +
+            data = get_last_part(D_0)) +
   facet_wrap(~Stim)
 ```
 
 ### Adding Stimulus meta data
 
 ```{r}
-UV22_1 <- 
-  UV22_0 %>% 
+D_1 <- 
+  D_0 %>% 
   left_join(Stimuli, by = "Stim") %>% 
   select(Obs, Part, Stim, Face, hum_like, Sclera, Skull, time, x, y)
 
-sample_n(UV22_1, 12)
+sample_n(D_1, 12)
 ```
 
 ## Deriving measures
@@ -326,8 +346,8 @@ add_duration <-
     mutate(data,  duration = lead(time) - time)
 
 
-UV22_2 <- 
-  UV22_1 %>% 
+D_2 <- 
+  D_1 %>% 
   mutate(Sequence = as.factor(str_c(Part, Stim, sep = "_"))) %>% 
   group_by(Sequence) %>% 
   add_duration() %>% 
@@ -339,13 +359,13 @@ UV22_2 <-
 
 ```{r}
 
-UV22_2 %>% 
+D_2 %>% 
   ggplot(aes(x = duration)) +
   geom_histogram() +
   facet_wrap(~Stim)
 
 
-UV22_2 %>% 
+D_2 %>% 
   ggplot(aes(x = travel)) +
   geom_histogram() +
   facet_wrap(~Stim)
@@ -403,21 +423,21 @@ G_1
 #### AOI Classification
 
 ```{r}
-UV22_3 <- 
-  UV22_2 %>% 
+D_3 <- 
+  D_2 %>% 
   left_join(AOI, by = "Face") %>% 
   mutate(is_in = x > xmin & x < xmax & y > ymin & y < ymax) %>% 
   filter(is_in) %>% 
   select(Obs, AOI) %>% 
-  right_join(UV22_2, by = "Obs") %>% 
+  right_join(D_2, by = "Obs") %>% 
   mutate(AOI = if_else(is.na(AOI), "Outside", AOI)) %>% 
   arrange(Part, time)
 
-summary(UV22_3)
+summary(D_3)
 ```
 
 ```{r}
-UV22_3 %>% 
+D_3 %>% 
   group_by(AOI, Sclera, Skull) %>% 
   summarize(n = n()) %>% 
   ungroup() %>% 
@@ -433,7 +453,7 @@ G_0 +
                  col = AOI),
              alpha = .5,
              inherit.aes  = F,
-             data = UV22_3)
+             data = D_3)
 ```
 
 ### Measuring visits
@@ -448,9 +468,9 @@ A *visit* is a closed sequence of eye positions in the same region. The followin
 
 travel_threshold <- 50
 
-UV22_4 <-
+D_4 <-
 
-  UV22_3 %>%
+  D_3 %>%
 
   group_by(Part, Stim) %>%
 
@@ -462,7 +482,7 @@ UV22_4 <-
 
   ungroup()
 
-sample_n(UV22_4, 10)
+sample_n(D_4, 10)
 
 ```
 
@@ -478,7 +498,7 @@ G_3 <-
              color = "white",
              alpha = .2,
              inherit.aes  = F,
-             data = UV22_4)
+             data = D_4)
 
 G_3
 
@@ -491,7 +511,7 @@ G_4 <-
   geom_path(aes(x = x, y = y,
                 col = Part),
             inherit.aes  = F,
-            data = UV22_4) # <--
+            data = D_4) # <--
 
 G_4
 
@@ -504,8 +524,8 @@ G_4
 
 ```{r}
 
-UV22_6 <-
-  UV22_4 %>%
+D_6 <-
+  D_4 %>%
   group_by(Part, Face, AOI, Sclera, Skull) %>%  # <--
   summarize(n_visits = n(),
             total_dur = sum(duration, na.rm = TRUE)) %>%
@@ -513,7 +533,7 @@ UV22_6 <-
   mutate(congruent = (Sclera == Skull))
 
 
-UV22_6
+D_6
 
 ```
 
@@ -521,7 +541,7 @@ UV22_6
 
 G_6 <-
 
-  UV22_6 %>%
+  D_6 %>%
   ggplot(aes(x = congruent, y = n_visits, fill = AOI)) +
   facet_wrap(~Part) +
   geom_col()
@@ -534,7 +554,7 @@ G_6
 ```{r}
 
 G_7 <-
-  UV22_6 %>%
+  D_6 %>%
   ggplot(aes(x = AOI, y = total_dur, fill = congruent)) +
   facet_wrap(~Part) +
   geom_col()
@@ -545,7 +565,7 @@ G_7
 
 ```{r}
 
-save(AOI, UV22_1, UV22_2, UV22_3, UV22_4, UV22_6, file = "UV22.Rda")
+save(AOI, D_1, D_2, D_3, D_4, D_6, file = "D.Rda")
 
 ```
 
